@@ -1,3 +1,6 @@
 *.pyc
 *.cache
 *.pid
+.settings
+/bin
+/html-template
