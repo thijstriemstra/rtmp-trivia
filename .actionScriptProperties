@@ -12,7 +12,9 @@
     </libraryPath>
     <sourceAttachmentPath/>
   </compiler>
-  <applications/>
+  <applications>
+    <application path="Main.mxml"/>
+  </applications>
   <modules/>
   <buildCSSFiles/>
 </actionScriptProperties>

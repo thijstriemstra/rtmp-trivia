@@ -1,3 +1,5 @@
+// Copyright (c) The rtmp-trivia Project.
+// See LICENSE.txt for details.
 package com.collab.rtmptrivia
 {
 	import flash.events.MouseEvent;
@@ -30,7 +32,7 @@ package com.collab.rtmptrivia
 		private var _call		: Button;
 		private var _gateway	: TextInput;
 		
-		private var _url		: String = "rtmp://localhost:1935/acidswf";
+		private var _url		: String = "rtmp://localhost:1935/trivia";
 		private var _nc			: NetConnection;
 		private var _title		: String;
 		
