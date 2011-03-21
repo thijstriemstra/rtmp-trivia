@@ -6,6 +6,7 @@ package com.collab.rtmptrivia
 	import flash.events.NetStatusEvent;
 	import flash.events.SecurityErrorEvent;
 	import flash.net.NetConnection;
+	import flash.net.ObjectEncoding;
 	
 	import mx.utils.ObjectUtil;
 	
@@ -70,6 +71,7 @@ package com.collab.rtmptrivia
 			if ( !_nc )
 			{
 				_nc = new NetConnection();
+				_nc.objectEncoding = ObjectEncoding.AMF0;
 				_nc.client = new TestClient();
 				_nc.addEventListener( NetStatusEvent.NET_STATUS, onStatus );
 				_nc.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );

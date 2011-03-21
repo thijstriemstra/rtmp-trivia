@@ -3,4 +3,5 @@
 *.pid
 .settings
 /bin
+/bin-release
 /html-template
