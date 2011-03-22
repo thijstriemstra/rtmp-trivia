@@ -71,6 +71,7 @@ package com.collab.rtmptrivia
 			if ( !_nc )
 			{
 				_nc = new NetConnection();
+				// XXX: remove when #132 is resolved
 				_nc.objectEncoding = ObjectEncoding.AMF0;
 				_nc.client = new TestClient();
 				_nc.addEventListener( NetStatusEvent.NET_STATUS, onStatus );
