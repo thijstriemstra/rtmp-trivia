@@ -7,15 +7,17 @@ package com.collab.rtmptrivia
 	 */	
 	public class TestClient
 	{
+		public var test	: String = "123";
+		
 		/**
 		 * @param param
 		 * @return 
 		 */		
-		public function some_method( param:String ):Boolean
+		public function some_method( param:String ):TestClient
 		{
 			trace( "some_method(" + param + ")" );
 			
-			return true;
+			return new TestClient();
 		}
 		
 	}
