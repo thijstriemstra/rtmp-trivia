@@ -1,7 +1,13 @@
 # Copyright (c) The rtmp-trivia Project.
 # See LICENSE.txt for details.
 
+"""
+Trivia game.
+"""
+
+
 import logging
+import sys
 
 from zope.interface import implements
 
@@ -18,35 +24,77 @@ class TriviaClient(Client):
     Remote methods that are exposed to the client.
     """
 
+    def printData(self, d):
+        """
+        Data handling function to be added as a callback: handles the
+        data by printing the result
+        """
+        print d
+
     def invokeOnClient(self, data):
         """
         Invokes some method on the connected clients.
         """
-        print 'invokeOnClient: %s' % data 
-        for client in self.application.clients.values():
+        print 'invokeOnClient: %s' % data
+        for i, client in self.application.clients.items():
             #client.call('some_method', data)
             d = client.call('some_method', data, notify=True)
+            d.addCallback(self.printData)
 
         return data
 
 
 class TriviaApplication(Application):
     """
-    Trivia game.
+    Trivia server-side application.
     """
 
     client = TriviaClient
+    host = 'collab.dev/gateway'
+    address = 'http://%s' % (host)
+    appAgent = 'CollabTrivia/1.0.0'
+    newQuestion_Interval = 4000
+    hint_interval = 12000
+    total_hints = 3
+    current_hint = 0
+    totalNrQuestions = 26380
+    startup_time = 0
+
+
+    def onAppStart(self):
+        """
+        Buggy, see #138
+        """
+        #server = self.module_context.getServer()
+        #started = datetime.fromtimestamp(server.getStartTime() / 1000)
+
+        #log.msg(60 * "=")
+        #log.msg("Server version: %s." % server.getVersion())
+        #log.msg("Server started on: %s" % started)
+        log.msg(60 * "=")
+
+        log.msg("Trivia Gateway: %s" % self.address)
 
 
     def onConnect(self, client):
-        print "\nAccepted connection for '%s' from client: %s" % (self.name, client.id)
-        print "Flash Player: %s" % client.agent
-        print "URI: %s\n" % client.uri
+        """
+        """
+        log.msg( "Accepted connection for '%s' from client: %s" % (self.name, client.id))
+        log.msg( "Flash Player: %s" % client.agent )
+        log.msg( "URI: %s" % client.uri )
 
+        """
+        self.service_path = trivia_namespace
+        self.client = TriviaAMFClient(self.address, self.service_path,
+                                      logger=self.log, user_agent=self.appAgent)
+        self.log.msg(60 * "-")
+        """
         return True
 
 
     def onDisconnect(self, client):
+        """
+        """
         print "Client '%s' has been disconnected from the application" % client.id
 
 
