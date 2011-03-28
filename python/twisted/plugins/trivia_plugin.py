@@ -23,7 +23,8 @@ from rtmpy.server import ServerFactory
 from pyamf import version as pyamf_version
 from pyamf.remoting.gateway.twisted import TwistedGateway
 
-from trivia import TriviaApplication, __version__, namespace
+from trivia import TriviaApplication, TriviaSite
+from trivia import __version__, namespace
 from trivia.services import TriviaService
 
 
@@ -42,9 +43,12 @@ class WebServer(server.Site):
     Webserver serving an AMF gateway and crossdomain.xml file.
     """
 
-    def __init__(self, services, logLevel=logging.ERROR,
+    def __init__(self, site, services, logLevel=logging.ERROR,
                  gateway_path='gateway', crossdomain='crossdomain.xml',
                  debug=False):
+        """
+        @type site: L{trivia.TriviaSite}
+        """
 
         logging.basicConfig(
             level=logLevel, datefmt='%Y-%m-%d %H:%M:%S%z',
@@ -59,6 +63,7 @@ class WebServer(server.Site):
                                  logger=logging, debug=debug)
 
         root = resource.Resource()
+        root.putChild('', site)
         root.putChild(gateway_path, gateway)
         root.putChild('crossdomain.xml', static.File(crossdomain,
                       defaultType='application/xml'))
@@ -150,6 +155,9 @@ class TriviaServiceMaker(object):
                                          interface=options['rtmp-host'])
         rtmp_service.setServiceParent(top_service)
 
+        # site
+        trivia_site = TriviaSite()
+
         # amf
         amf_service = TriviaService()
         amf_port = int(options['amf-port'])
@@ -157,8 +165,8 @@ class TriviaServiceMaker(object):
             options['amf-service']: amf_service
         }
 
-        amf_server = WebServer(amf_services, logging.INFO,
-                               crossdomain=options['crossdomain'])
+        amf_server = WebServer( trivia_site, amf_services, logging.INFO,
+                                crossdomain=options['crossdomain'])
 
         web_service = internet.TCPServer(amf_port, amf_server,
                                          interface=options['amf-host'])

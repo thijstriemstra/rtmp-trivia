@@ -12,6 +12,7 @@ import datetime
 import logging
 
 from twisted.python import log
+from twisted.web.resource import Resource
 
 from rtmpy.server import Application, Client
 
@@ -161,3 +162,12 @@ class TriviaApplication(Application):
             #self._next_question()
         else:
             log.err("Error loading questions! Returned: %s" % (str(self.questions)))
+
+
+class TriviaSite(Resource):
+    """
+    """
+    isLeaf = True
+
+    def render_GET(self, request):
+        return "<html><body>rtmp-trivia %s</body></html>" % str(__version__)
