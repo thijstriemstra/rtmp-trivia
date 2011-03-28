@@ -10,7 +10,7 @@ Remoting services.
 from sqlalchemy.sql import select, and_
 
 
-class TriviaService(object):
+class TriviaRemotingService(object):
     """
     Trivia AMF service.
 
@@ -18,5 +18,5 @@ class TriviaService(object):
     :type connection: `Engine`
     """
 
-    def __init__(self, conn):
+    def __init__(self, conn=None):
         self.connection = conn

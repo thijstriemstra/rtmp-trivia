@@ -15,7 +15,9 @@ from zope.interface import implements
 from twisted.python import usage, log
 from twisted.plugin import IPlugin
 from twisted.application import internet, service
-from twisted.web import server, resource, static
+from twisted.web.resource import Resource
+from twisted.web.server import Site
+from twisted.web.static import File
 
 from rtmpy import __version__ as rtmpy_version
 from rtmpy.server import ServerFactory
@@ -23,9 +25,9 @@ from rtmpy.server import ServerFactory
 from pyamf import version as pyamf_version
 from pyamf.remoting.gateway.twisted import TwistedGateway
 
-from trivia import TriviaApplication, TriviaSite
-from trivia import __version__, namespace
-from trivia.services import TriviaService
+from trivia.site import TriviaSite
+from trivia.services import TriviaRemotingService
+from trivia import TriviaApplication, __version__, namespace
 
 
 
@@ -38,7 +40,7 @@ class RTMPServer(ServerFactory):
         ServerFactory.__init__(self, app)
 
 
-class WebServer(server.Site):
+class WebServer(Site):
     """
     Webserver serving an AMF gateway and crossdomain.xml file.
     """
@@ -47,7 +49,7 @@ class WebServer(server.Site):
                  gateway_path='gateway', crossdomain='crossdomain.xml',
                  debug=False):
         """
-        @type site: L{trivia.TriviaSite}
+        @type site: L{trivia.site.TriviaSite}
         """
 
         logging.basicConfig(
@@ -62,13 +64,13 @@ class WebServer(server.Site):
         gateway = TwistedGateway(services, expose_request=False,
                                  logger=logging, debug=debug)
 
-        root = resource.Resource()
+        root = Resource()
         root.putChild('', site)
         root.putChild(gateway_path, gateway)
-        root.putChild('crossdomain.xml', static.File(crossdomain,
+        root.putChild('crossdomain.xml', File(crossdomain,
                       defaultType='application/xml'))
 
-        server.Site.__init__(self, root)
+        Site.__init__(self, root)
 
 
 class TriviaService(service.Service):
@@ -143,7 +145,6 @@ class TriviaServiceMaker(object):
         amf_host = '%s://%s:%s/gateway' % (options['amf-transport'],
                                            options['amf-host'],
                                            options['amf-port'])
-                
         # rtmp
         app = TriviaApplication(amf_host)
         rtmp_apps = {
@@ -159,7 +160,7 @@ class TriviaServiceMaker(object):
         trivia_site = TriviaSite()
 
         # amf
-        amf_service = TriviaService()
+        amf_service = TriviaRemotingService()
         amf_port = int(options['amf-port'])
         amf_services = {
             options['amf-service']: amf_service
