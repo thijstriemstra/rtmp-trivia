@@ -20,8 +20,11 @@ from pyamf.remoting.client import RemotingService
 from sqlalchemy.sql import select, and_
 
 
-
+# application version
 __version__ = Version(0, 1)
+
+# python/actionscript base-alias
+namespace = 'com.collab.rtmptrivia'
 
 
 class TriviaClient(Client):
@@ -80,7 +83,7 @@ class TriviaApplication(Application):
     def onDisconnect(self, client):
         """
         """
-        print "Client '%s' has been disconnected from the application" % client.id
+        log.msg("Client '%s' has been disconnected from the application" % client.id)
 
 
     def onAppStart(self):
