@@ -2,7 +2,9 @@
 # See LICENSE.txt for details.
 
 """
-Trivia game.
+Trivia game, inspired by IRC's Trivia bots.
+
+@since: 0.1
 """
 
 
@@ -16,8 +18,6 @@ from rtmpy.server import Application, Client
 from pyamf.versions import Version
 from pyamf.remoting import RemotingError
 from pyamf.remoting.client import RemotingService
-
-from sqlalchemy.sql import select, and_
 
 
 # application version
@@ -59,16 +59,21 @@ class TriviaApplication(Application):
     """
 
     client = TriviaClient
-    gateway = 'http://trivia.dev/gateway'
     service_path = 'trivia'
     appAgent = 'CollabTrivia/%s' % str(__version__)
-    questions = None
+    questions = []
     newQuestion_Interval = 4000
     hint_interval = 12000
     total_hints = 3
     current_hint = 0
     totalNrQuestions = 26380
     startup_time = 0
+
+
+    def __init__(self, gateway='http://localhost:8000/gateway'):
+        self.gateway = gateway
+        Application.__init__(self)
+
 
     def onConnect(self, client):
         """
@@ -101,7 +106,13 @@ class TriviaApplication(Application):
         # create Mr. Trivia
         if self.name == "trivia":
             # XXX: no shared object support yet (#46)
-            self.questions = [] #self.getAttribute("askedQuestions")
+            #self.questions = self.getAttribute("askedQuestions")
+
+            # setup logging
+            logging.basicConfig(
+                level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S%z',
+                format='%(asctime)s [%(name)s] %(message)s'
+            )
 
             # create AMF client
             self.remoting = RemotingService(self.gateway, logger=logging,
@@ -111,13 +122,13 @@ class TriviaApplication(Application):
             # is it the first time
             if len(self.questions) == 0:
                 # load the questions from database
-                print("TRIVIA : Loading Trivia questions...")
+                logging.info("Loading Trivia questions...")
 
                 try:
                     # load startup questions
                     self.questions = self.service.getQuestions()
                 except RemotingError, e:
-                    raise Exception(e)
+                    pass
 
                 # save the array in sharedobject (#46)
                 #self.setAttribute("askedQuestions", self.questions)

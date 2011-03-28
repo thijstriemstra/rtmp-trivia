@@ -3,6 +3,8 @@
 
 """
 twistd plugin for Trivia game.
+
+@since: 0.1
 """
 
 
@@ -21,8 +23,9 @@ from rtmpy.server import ServerFactory
 from pyamf import version as pyamf_version
 from pyamf.remoting.gateway.twisted import TwistedGateway
 
-from trivia import TriviaApplication, __version__, \
-                   namespace
+from trivia import TriviaApplication, __version__, namespace
+from trivia.services import TriviaService
+
 
 
 class RTMPServer(ServerFactory):
@@ -40,7 +43,8 @@ class WebServer(server.Site):
     """
 
     def __init__(self, services, logLevel=logging.ERROR,
-                 crossdomain='crossdomain.xml', debug=False):
+                 gateway_path='gateway', crossdomain='crossdomain.xml',
+                 debug=False):
 
         logging.basicConfig(
             level=logLevel, datefmt='%Y-%m-%d %H:%M:%S%z',
@@ -55,7 +59,7 @@ class WebServer(server.Site):
                                  logger=logging, debug=debug)
 
         root = resource.Resource()
-        root.putChild('', gateway)
+        root.putChild(gateway_path, gateway)
         root.putChild('crossdomain.xml', static.File(crossdomain,
                       defaultType='application/xml'))
 
@@ -131,8 +135,12 @@ class TriviaServiceMaker(object):
         trivia_service.options = options
         trivia_service.setServiceParent(top_service)
 
+        amf_host = '%s://%s:%s/gateway' % (options['amf-transport'],
+                                           options['amf-host'],
+                                           options['amf-port'])
+                
         # rtmp
-        app = TriviaApplication()
+        app = TriviaApplication(amf_host)
         rtmp_apps = {
             options['rtmp-app']: app
         }
@@ -143,9 +151,10 @@ class TriviaServiceMaker(object):
         rtmp_service.setServiceParent(top_service)
 
         # amf
+        amf_service = TriviaService()
         amf_port = int(options['amf-port'])
         amf_services = {
-            options['amf-service']: app
+            options['amf-service']: amf_service
         }
 
         amf_server = WebServer(amf_services, logging.INFO,
@@ -153,6 +162,7 @@ class TriviaServiceMaker(object):
 
         web_service = internet.TCPServer(amf_port, amf_server,
                                          interface=options['amf-host'])
+        web_service.setServiceParent(top_service)
 
         return top_service
 
