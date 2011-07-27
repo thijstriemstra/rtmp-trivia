@@ -3,15 +3,14 @@
 			   xmlns:s="library://ns.adobe.com/flex/spark" 
 			   xmlns:mx="library://ns.adobe.com/flex/mx"
 			   xmlns:examples="com.collab.rtmptrivia.*"
-			   width="100%" height="100%"
-			   backgroundColor="white"
+			   width="100%" height="100%" backgroundColor="white"
 			   pageTitle="Trivia">
-	
+
 	<s:layout>
 		<s:BasicLayout/>
 	</s:layout>
-	
+
 	<examples:ConnectionPanel width="100%" height="100%"
 							  top="10" bottom="10" left="10" right="10"/>
-	
+
 </s:Application>

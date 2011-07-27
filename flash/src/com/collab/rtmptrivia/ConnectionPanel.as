@@ -24,23 +24,23 @@ package com.collab.rtmptrivia
 	 */	
 	public class ConnectionPanel extends Panel
 	{
-		private static const CONNECT		: String = "Connect";
-		private static const DISCONNECT		: String = "Disconnect";
-		private static const SERVICE_NAME	: String = "invokeOnClient";
+		private const CONNECT			: String = "Connect";
+		private const DISCONNECT		: String = "Disconnect";
+		private const SERVICE_NAME		: String = "invokeOnClient";
 		
-		private var _status		: RichEditableText;
-		private var _submit		: Button;
-		private var _call		: Button;
-		private var _gateway	: TextInput;
+		private var _status				: RichEditableText;
+		private var _submit				: Button;
+		private var _call				: Button;
+		private var _gateway			: TextInput;
 		
-		private var _url		: String = "rtmp://localhost:1935/trivia";
-		private var _nc			: NetConnection;
-		private var _title		: String;
+		private var _url				: String = "rtmp://localhost:1935/trivia";
+		private var _nc					: NetConnection;
+		private var _title				: String;
 		
 		/**
-		 * Constructor.
+		 * Creates a new ConnectionPanel object.
 		 * 
-		 * @param title
+		 * @param title		Title for the panel.
 		 */		
 		public function ConnectionPanel( title:String="Trivia" )
 		{
@@ -68,6 +68,7 @@ package com.collab.rtmptrivia
 		{
 			super.createChildren();
 			
+			// netconnection
 			if ( !_nc )
 			{
 				_nc = new NetConnection();
@@ -78,6 +79,7 @@ package com.collab.rtmptrivia
 				_nc.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );
 			}
 			
+			// status field
 			if ( !_status )
 			{
 				_status = new RichEditableText();
