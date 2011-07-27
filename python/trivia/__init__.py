@@ -8,7 +8,7 @@ Trivia game, inspired by IRC's Trivia bots.
 """
 
 
-import datetime
+from datetime import datetime
 import logging
 
 from twisted.python import log
@@ -122,7 +122,8 @@ class TriviaApplication(Application):
         """
         Handle startup.
         """
-        log.msg('RESULT: %s' % d)
+        self.questions = d
+
         log.msg('Total questions: %s' % len(self.questions))
 
         # save the array in sharedobject (rtmpy ticket #46)

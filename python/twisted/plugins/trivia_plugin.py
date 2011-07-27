@@ -27,6 +27,9 @@ from pyamf.remoting.gateway.twisted import TwistedGateway
 
 from plasma.version import version as plasma_version
 
+from sqlalchemy import __version__ as sqlalchemy_version
+from sqlalchemy import create_engine, MetaData
+
 from trivia.site import TriviaSite
 from trivia.services import TriviaRemotingService
 from trivia import TriviaApplication, __version__, namespace
@@ -53,11 +56,6 @@ class WebServer(Site):
         """
         @type site: L{trivia.site.TriviaSite}
         """
-
-        logging.basicConfig(
-            level=logLevel, datefmt='%Y-%m-%d %H:%M:%S%z',
-            format='%(asctime)s [%(name)s] %(message)s'
-        )
 
         # Map ActionScript classes to Python
         #register_class(data.RemoteClass, ns + '.RemoteClass')
@@ -97,6 +95,7 @@ class TriviaService(service.Service):
         log.msg('       Base alias:   %s' % namespace)
         log.msg('       PyAMF:        %s' % str(pyamf_version))
         log.msg('       Plasma:       %s' % plasma_version)
+        log.msg('       SQLAlchemy:   %s' % str(sqlalchemy_version))
         log.msg('')
         log.msg('RTMP')
         log.msg(80 * '-')
@@ -124,6 +123,7 @@ class Options(usage.Options):
         ['rtmp-protocol', None, 'rtmp', 'Version of the RTMP protocol that the server should use.'],
         ['rtmp-host', None, 'localhost', 'The interface for the RTMP server to listen on.'],
         ['rtmp-app', None, 'trivia', 'The RTMP application name.'],
+        ['database', None, 'mysql+mysqldb://trivia:trivia@localhost/trivia', 'Database connection string.'],
         ['crossdomain', None, 'crossdomain.xml', 'Path to a crossdomain.xml file.'],
     ]
 
@@ -145,9 +145,15 @@ class TriviaServiceMaker(object):
         trivia_service.options = options
         trivia_service.setServiceParent(top_service)
 
+        logging.basicConfig(
+            level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S%z',
+            format='%(asctime)s [%(name)s] %(message)s'
+        )
+
         amf_host = '%s://%s:%s/gateway' % (options['amf-transport'],
                                            options['amf-host'],
                                            options['amf-port'])
+        
         # rtmp
         app = TriviaApplication(amf_host)
         rtmp_apps = {
@@ -159,11 +165,18 @@ class TriviaServiceMaker(object):
                                          interface=options['rtmp-host'])
         rtmp_service.setServiceParent(top_service)
 
+        # db connection
+        engine = create_engine(options['database'])
+        connection = engine.connect()
+        meta = MetaData()
+        meta.bind = engine
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
+
         # site
         trivia_site = TriviaSite()
 
         # amf
-        amf_service = TriviaRemotingService()
+        amf_service = TriviaRemotingService(meta)
         amf_port = int(options['amf-port'])
         amf_services = {
             options['amf-service']: amf_service
