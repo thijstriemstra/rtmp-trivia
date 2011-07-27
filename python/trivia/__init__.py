@@ -7,9 +7,10 @@ Trivia game, inspired by IRC's Trivia bots.
 @since: 0.1
 """
 
-
-from datetime import datetime
 import logging
+import math
+from random import randint
+from datetime import datetime
 
 from twisted.python import log
 
@@ -64,7 +65,6 @@ class TriviaApplication(Application):
     questions = []
     newQuestion_Interval = 4000
     hint_interval = 12000
-    total_hints = 3
     current_hint = 0
     startup_time = 0
 
@@ -76,7 +76,8 @@ class TriviaApplication(Application):
     def onConnect(self, client):
         """
         """
-        log.msg( "New client connection for '%s' from client: %s" % (self.name, client.id))
+        log.msg( "New client connection for '%s' application from client: %s" % (
+                 self.name, client.id))
         log.msg( "Flash Player: %s" % client.agent )
         log.msg( "URI: %s" % client.uri )
 
@@ -96,8 +97,8 @@ class TriviaApplication(Application):
         @note: `onAppStart` is not fully implemented in RTMPy, see ticket #138
         """
         log.msg(60 * "=")
+        # XXX: print server version
         #log.msg("Server version: %s." % server.getVersion())
-        #log.msg("Server started on: %s" % started)
         log.msg("Trivia Gateway: %s" % self.gateway)
         log.msg(60 * "=")
 
@@ -124,9 +125,7 @@ class TriviaApplication(Application):
         """
         self.questions = d
 
-        log.msg('Total questions: %s' % len(self.questions))
-
-        # save the array in sharedobject (rtmpy ticket #46)
+        # XXX: save the array in sharedobject (rtmpy ticket #46)
         #self.setAttribute("askedQuestions", self.questions)
         
         # start Mr. Trivia
@@ -142,7 +141,7 @@ class TriviaApplication(Application):
         """
         failure.printDetailedTraceback()
         
-        # this returns 'NetConnection.Connect.Rejected' with status message
+        # XXX: this returns 'NetConnection.Connect.Rejected' with status message
         # 'Authorization is required'. This should say something like
         # 'Error starting Mr. Trivia` instead (and possibly including the
         # failure). See rtmpy ticket #141.
@@ -159,11 +158,11 @@ class TriviaApplication(Application):
             log.msg("Loading Trivia questions...")
 
             # load startup questions
-            d = self.service.getQuestions()
-            d.addCallback(self._startupData)
-            d.addErrback(self._startupError)
+            call = self.service.getQuestions()
+            call.addCallback(self._startupData)
+            call.addErrback(self._startupError)
 
-            return d
+            return call
 
         return True
 
@@ -187,7 +186,7 @@ class TriviaApplication(Application):
             #         self.responseTimeRecord.responseTime + " seconds.", 38)
 
             # start with first question
-            #self._next_question()
+            self._next_question()
         else:
             log.err("No questions found! Returned: %s" % (str(self.questions)))
 
@@ -195,42 +194,116 @@ class TriviaApplication(Application):
     def _next_question(self):
         """
         """
-        to_ask_questions = self.questions[:]
-
         # pick a random question
+        to_ask_questions = self.questions[:]
         rnd_question_index = randint(1, len(to_ask_questions))-1
+        current_question = to_ask_questions[rnd_question_index]
 
-        # get the question index
-        current_question_index = to_ask_questions[rnd_question_index]
-
-        # get the question object
-        question_obj = to_ask_questions[current_question_index]
-
-        self.log.info("question_obj: %s" % str(question_obj))
+        log.msg("current_question: %s" % current_question)
+        #log.msg("current_question.answer: %s" % current_question.answer)
 
         self.current_hint = 0
         self.winner = False
-        self.question_id = question_obj.q_id
-        self.question = question_obj.question
-        self.answer = question_obj.answer
+        self.question_id = current_question.id
+        self.question = current_question.question
+        self.answer = current_question.answer
         #self.responseTimeRecord.time = 0
-
-        # create hints for the answer
-        scrambled_answers = self._make_hints(self.answer, self.total_hints, 70)
-
-        self.log.info("scrambled_answers: %s" % str(scrambled_answers))
+        scrambled_answers = self._make_hints(self.answer)
+        #log.msg("scrambled_answers: %s" % str(scrambled_answers))
 
         # print current question
-        #self.log.debug("TRIVIA : QUESTION: " + self.question_id + "   (" + ((len(application.questionIDs)-len(to_ask_questions)+1) + "/" + len(application.questionIDs) + ") : " + question + " | " + application.answer)
-
-        # give a hint every x sec
+        log.msg("TRIVIA : QUESTION: %s   (1/%s) : %s | %s" % (
+                self.question_id,
+                #(len(self.questions) - (len(to_ask_questions) + 1)),
+                len(self.questions),
+                self.question,
+                self.answer))
+        
+        # XXX: give a hint every x sec
         #self.the_hints = setInterval(self._give_hint, self.hint_interval)
 
         # send question to clients
-        #self._send_trivia_crew("newQuestion", question_obj)
+        self._send_trivia_crew("newQuestion", current_question)
 
-        # remove question from array
+        # XXX: remove question from list
         #to_ask_questions.splice(rnd_question_index, 1)
 
-        # save the array to disk
-        #application.users_so.setProperty("askedQuestions", to_ask_questions)
+        # XXX: save the list to disk (rtmpy ticket #46)
+        #self.users_so.setProperty("askedQuestions", to_ask_questions)
+
+
+    def _make_hints(self, answer, total_hints=3, hint_percentage=70):
+        """
+        Create a list of hints for the answer to a question.
+        """
+        total_chars = len(answer)
+        gemene_deler = 100 / (hint_percentage / total_hints)
+        per_hint = 0
+        the_hint = ""
+        relevant_tokens = 0
+        cur_hint = []
+        nr_list = []
+        hints_list = []
+        answer_list = []
+        whitespace = " "
+        scrambler = "*"
+
+        # answer length
+        if total_chars > 1:
+            for a in xrange(total_chars):
+                nr_list.append(a)
+                answer_list.append(answer[a])
+
+                if answer_list[a] != whitespace:
+                    relevant_tokens += 1
+                    hints_list.append(scrambler)
+                else:
+                    hints_list.append(whitespace)
+
+            per_hint = int(math.ceil(relevant_tokens/gemene_deler))
+
+            #log.msg('total_chars: %s' % total_chars)
+            #log.msg('relevant_tokens: %s' % relevant_tokens)
+            #log.msg('answer_list: %s' % answer_list)
+            #log.msg('hints_list: %s' % hints_list)
+            #log.msg('per_hint: %s' % per_hint)
+
+            for b in xrange(total_hints):
+                for c in xrange(per_hint):
+                    rnd_nr = randint(1, len(nr_list)) - 1
+                    spliced = nr_list.pop(rnd_nr)
+
+                    if answer_list[rnd_nr] != whitespace:
+                        hints_list[rnd_nr] = answer_list[rnd_nr]
+
+                    the_hint = ""
+                    for a in xrange(total_chars):
+                        the_hint += hints_list[a]
+
+                    if the_hint != answer:
+                        lastHint = b
+                        cur_hint.append(the_hint)
+                    else:
+                        cur_hint.append(cur_hint[lastHint])
+
+            return cur_hint
+
+        # its a one char answer
+        else:
+            return [scrambler, scrambler, answer]
+
+
+    def _send_trivia_crew(self, method, object1, object2=None):
+        """
+        """
+        log.msg('send trivia crew: %s' % method)
+        
+        # check which clients need a question
+        for i in xrange(len(self.clients)):
+            if self.clients[i].trivia:
+                log.msg("client '%s' is playin trivia: '%s'" %s (
+                        self.clients[i].id,
+                        self.clients[i].trivia))
+
+                # give the client a new question
+                self.clients[i].call(method, null, object1, object2)

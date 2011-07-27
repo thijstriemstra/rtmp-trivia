@@ -22,7 +22,7 @@ from twisted.web.static import File
 from rtmpy import __version__ as rtmpy_version
 from rtmpy.server import ServerFactory
 
-from pyamf import version as pyamf_version
+from pyamf import version as pyamf_version, register_class
 from pyamf.remoting.gateway.twisted import TwistedGateway
 
 from plasma.version import version as plasma_version
@@ -31,7 +31,7 @@ from sqlalchemy import __version__ as sqlalchemy_version
 from sqlalchemy import create_engine, MetaData
 
 from trivia.site import TriviaSite
-from trivia.services import TriviaRemotingService
+from trivia.services import TriviaRemotingService, Question
 from trivia import TriviaApplication, __version__, namespace
 
 
@@ -55,12 +55,13 @@ class WebServer(Site):
                  debug=False):
         """
         @type site: L{trivia.site.TriviaSite}
+        @type services: dict
         """
 
         # Map ActionScript classes to Python
-        #register_class(data.RemoteClass, ns + '.RemoteClass')
-        #register_class(data.ExternalizableClass, ns + '.ExternalizableClass')
+        register_class(Question, namespace + '.RemoteClass')
 
+        # remoting gateway
         gateway = TwistedGateway(services, expose_request=False,
                                  logger=logging, debug=debug)
 
@@ -107,6 +108,7 @@ class TriviaService(service.Service):
         log.msg('       RTMPy:        %s' % str(rtmpy_version))
         log.msg('')
         log.msg('Trivia service completed startup.')
+        log.msg('')
 
 
 class Options(usage.Options):
@@ -144,7 +146,7 @@ class TriviaServiceMaker(object):
         trivia_service = TriviaService()
         trivia_service.options = options
         trivia_service.setServiceParent(top_service)
-
+        
         logging.basicConfig(
             level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S%z',
             format='%(asctime)s [%(name)s] %(message)s'
