@@ -108,8 +108,8 @@ class TriviaApplication(Application):
 
             # XXX: setup dedicated logger for remoting client
             logging.basicConfig(
-                level=logging.ERROR, datefmt='%Y-%m-%d %H:%M:%S%z',
-                format='%(asctime)s [%(name)s] %(message)s'
+                level=logging.ERROR, datefmt='%Y-%m-%d %H:%M:%S:%z',
+                format='%(asctime)s %(message)s'
             )
 
             # create async AMF client

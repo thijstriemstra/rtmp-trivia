@@ -25,6 +25,8 @@ from rtmpy.server import ServerFactory
 from pyamf import version as pyamf_version
 from pyamf.remoting.gateway.twisted import TwistedGateway
 
+from plasma.version import version as plasma_version
+
 from trivia.site import TriviaSite
 from trivia.services import TriviaRemotingService
 from trivia import TriviaApplication, __version__, namespace
@@ -94,6 +96,7 @@ class TriviaService(service.Service):
         log.msg('       Service:      %s' % self.options['amf-service'])
         log.msg('       Base alias:   %s' % namespace)
         log.msg('       PyAMF:        %s' % str(pyamf_version))
+        log.msg('       Plasma:       %s' % plasma_version)
         log.msg('')
         log.msg('RTMP')
         log.msg(80 * '-')
