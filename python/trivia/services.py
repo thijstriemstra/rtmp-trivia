@@ -20,3 +20,7 @@ class TriviaRemotingService(object):
 
     def __init__(self, conn=None):
         self.connection = conn
+
+
+    def getQuestions(self):
+        return []
