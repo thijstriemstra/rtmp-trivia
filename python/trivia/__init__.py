@@ -13,6 +13,7 @@ from random import randint
 from datetime import datetime
 
 from twisted.python import log
+from twisted.internet.task import LoopingCall
 
 from rtmpy.server import Application, Client
 
@@ -63,10 +64,11 @@ class TriviaApplication(Application):
     service_path = 'trivia'
     appAgent = 'RTMP-Trivia/%s' % str(__version__)
     questions = []
-    newQuestion_Interval = 4000
-    hint_interval = 12000
+    newQuestion_Interval = 4
+    hint_interval = 12
     current_hint = 0
     startup_time = 0
+    total_hints = 3
 
     def __init__(self, gateway='http://localhost:8000/gateway'):
         self.gateway = gateway
@@ -76,10 +78,12 @@ class TriviaApplication(Application):
     def onConnect(self, client):
         """
         """
-        log.msg( "New client connection for '%s' application from client: %s" % (
-                 self.name, client.id))
-        log.msg( "Flash Player: %s" % client.agent )
-        log.msg( "URI: %s" % client.uri )
+        log.msg(60 * "-")
+        log.msg("New client connection for '%s' application from client: %s" % (
+                self.name, client.id))
+        log.msg("Flash Player: %s" % client.agent)
+        log.msg("URI: %s" % client.uri)
+        log.msg("")
 
         result = self._load_questions()
 
@@ -119,15 +123,16 @@ class TriviaApplication(Application):
             self.service = self.remoting.getService(self.service_path)
 
 
-    def _startupData(self, d):
+    def _startupData(self, result):
         """
         Handle startup.
         """
-        self.questions = d
+        self.questions = result
+        self.to_ask_questions = self.questions[:]
 
         # XXX: save the array in sharedobject (rtmpy ticket #46)
         #self.setAttribute("askedQuestions", self.questions)
-        
+
         # start Mr. Trivia
         self._start_game()
 
@@ -140,7 +145,7 @@ class TriviaApplication(Application):
         Handle errors while loading startup data.
         """
         failure.printDetailedTraceback()
-        
+
         # XXX: this returns 'NetConnection.Connect.Rejected' with status message
         # 'Authorization is required'. This should say something like
         # 'Error starting Mr. Trivia` instead (and possibly including the
@@ -188,18 +193,18 @@ class TriviaApplication(Application):
             # start with first question
             self._next_question()
         else:
-            log.err("No questions found! Returned: %s" % (str(self.questions)))
+            log.err("No questions found! Returned: %s" % (
+                str(self.questions)))
 
 
     def _next_question(self):
         """
         """
         # pick a random question
-        to_ask_questions = self.questions[:]
-        rnd_question_index = randint(1, len(to_ask_questions))-1
-        current_question = to_ask_questions[rnd_question_index]
+        rnd_question_index = randint(1, len(self.to_ask_questions)) - 1
+        current_question = self.to_ask_questions[rnd_question_index]
 
-        log.msg("current_question: %s" % current_question)
+        #log.msg("current_question: %s" % current_question)
         #log.msg("current_question.answer: %s" % current_question.answer)
 
         self.current_hint = 0
@@ -208,31 +213,97 @@ class TriviaApplication(Application):
         self.question = current_question.question
         self.answer = current_question.answer
         #self.responseTimeRecord.time = 0
-        scrambled_answers = self._make_hints(self.answer)
-        #log.msg("scrambled_answers: %s" % str(scrambled_answers))
+        self.scrambled_answers = self._make_hints(self.answer, self.total_hints)
+        #log.msg("scrambled_answers: %s" % str(self.scrambled_answers))
 
         # print current question
-        log.msg("TRIVIA : QUESTION: %s   (1/%s) : %s | %s" % (
+        log.msg("TRIVIA : QUESTION: %s   (%s/%s) : %s | %s" % (
                 self.question_id,
-                #(len(self.questions) - (len(to_ask_questions) + 1)),
+                (len(self.questions) - len(self.to_ask_questions)) + 1,
                 len(self.questions),
                 self.question,
                 self.answer))
-        
-        # XXX: give a hint every x sec
-        #self.the_hints = setInterval(self._give_hint, self.hint_interval)
+
+        # give a hint every x sec
+        self.hint_generator = LoopingCall(self._give_hint)
+        self.hint_generator.start(self.hint_interval)
 
         # send question to clients
         self._send_trivia_crew("newQuestion", current_question)
 
-        # XXX: remove question from list
-        #to_ask_questions.splice(rnd_question_index, 1)
+        # remove question from list
+        self.to_ask_questions.pop(rnd_question_index)
 
         # XXX: save the list to disk (rtmpy ticket #46)
         #self.users_so.setProperty("askedQuestions", to_ask_questions)
 
 
-    def _make_hints(self, answer, total_hints=3, hint_percentage=70):
+    def _give_hint(self):
+        """
+        Give new hint.
+        """
+        if self.current_hint < self.total_hints:
+            deHint = self.scrambled_answers[self.current_hint]
+
+            self._send_trivia_crew("newHint", deHint, self.current_hint + 1)
+
+            log.msg("TRIVIA : ///// HINT: %s      %s" %( 
+                    self.current_hint + 1, deHint))
+
+            self.current_hint += 1
+
+        else:
+            # nobody guessed the right answer
+            self._show_answer()
+
+
+    def _show_answer(self):
+        """
+        """
+        log.msg("TRIVIA : ///// ANSWER: %s" % self.answer)
+
+        # check which clients need a hint
+        self._send_trivia_crew("showAnswer", self.answer)
+
+        # mr trivia is the winner
+        self.winner = True
+
+        # stop giving hints
+        self.hint_generator.stop()
+
+        # start new question after few seconds
+        self.question_generator = LoopingCall(self._start_new_question)
+        self.question_generator.start(self.newQuestion_Interval)
+
+
+    def _send_trivia_crew(self, method, object1, object2=None):
+        """
+        """
+        #log.msg('send trivia crew: %s' % method)
+
+        # check which clients need a question
+        """
+        for i in xrange(len(self.clients)):
+            if self.clients[i].trivia:
+                log.msg("client '%s' is playin trivia: '%s'" %s (
+                        self.clients[i].id,
+                        self.clients[i].trivia))
+
+                # give the client a new question
+                self.clients[i].call(method, null, object1, object2)
+        """
+
+    def _start_new_question(self):
+        """
+        """
+        # stop startup question generator
+        self.question_generator.stop()
+
+        # give new question
+        self._next_question()
+
+
+    def _make_hints(self, answer, total_hints, hint_percentage=70):
         """
         Create a list of hints for the answer to a question.
         """
@@ -291,19 +362,3 @@ class TriviaApplication(Application):
         # its a one char answer
         else:
             return [scrambler, scrambler, answer]
-
-
-    def _send_trivia_crew(self, method, object1, object2=None):
-        """
-        """
-        log.msg('send trivia crew: %s' % method)
-        
-        # check which clients need a question
-        for i in xrange(len(self.clients)):
-            if self.clients[i].trivia:
-                log.msg("client '%s' is playin trivia: '%s'" %s (
-                        self.clients[i].id,
-                        self.clients[i].trivia))
-
-                # give the client a new question
-                self.clients[i].call(method, null, object1, object2)
