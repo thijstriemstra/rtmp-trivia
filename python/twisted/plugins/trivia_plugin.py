@@ -157,7 +157,7 @@ class TriviaServiceMaker(object):
                                            options['amf-port'])
         
         # rtmp
-        app = TriviaApplication(amf_host)
+        app = TriviaApplication(amf_host, options['amf-service'])
         rtmp_apps = {
             options['rtmp-app']: app
         }

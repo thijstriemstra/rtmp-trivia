@@ -9,24 +9,23 @@ Trivia game, inspired by IRC's Trivia bots.
 
 import logging
 from copy import copy
-from pprint import pformat
 from random import randint, sample
 from datetime import datetime
 
 from twisted.python import log
 from twisted.internet.task import LoopingCall
 
-from rtmpy.server import Application, Client
-
 from pyamf.versions import Version
 
 from plasma.client import HTTPRemotingService
+
+from rtmpy.server import Application, Client
 
 
 # application version
 __version__ = Version(0, 1)
 
-# python/actionscript base-alias
+# Python/Actionscript base class alias
 namespace = 'com.collab.rtmptrivia'
 
 
@@ -35,12 +34,121 @@ class TriviaClient(Client):
     Remote methods that are exposed to the client.
     """
 
-    def printData(self, d):
+    def playTrivia(self, join):
         """
-        Data handling function to be added as a callback: handles the
-        data by printing the result
+        subscribe to the trivia game
         """
-        log.msg(d)
+        log.msg('playTrivia: %s' % join)
+
+        self.trivia = join
+
+
+    def giveAnswer(self, answer, username, highscore, myResponseTime=None, record=None):
+        """
+        Answer to question or send chat message.
+
+        @param answer: Answer to question or chat message.
+        @param username: User's name.
+        @param highscore: Highscore for this client. 
+        """
+        myAnswer = answer.lower() == self.application.answer.lower()
+        log.msg('answer: %s' % myAnswer)
+
+        # XXX: its a time record, but maybe not the first person to give the right answer
+        #if record:
+        #    # world record?
+        #    if myResponseTime < self.application.responseTimeRecord.responseTime:
+        #        recordType = "world"
+        #    else:
+        #        recordType = "personal"
+        #else:
+        #    recordType = "none"
+
+        # check if it's an correct answer and whether you can still win this round
+        if myAnswer == True and self.application.winner == False:
+            # send clients the correct answer
+            for client in self.application.clients:
+                if self.application.clients[client].trivia == True:
+                    # earned points
+                    points = 250 - ((self.application.current_hint + 1) * 50)
+
+                    # the answer
+                    self.application.clients[client].call("chatMessage", answer, username)
+
+                    # correct answer
+                    self.application.clients[client].call("correctAnswer", answer, username, points + highscore,
+                                                          points, myResponseTime, recordType)
+
+        # check if you could be the winner
+        if self.application.winner == False:
+
+            # check if it's the right answer
+            if myAnswer:
+                #log.msg("Winner: "+ username +" answered in " + myResponseTime + " seconds.")
+                # you are the winner
+                self.application.winner = True
+
+                # your time
+                self.application.responseTimeRecord.time = myResponseTime
+
+                # add points
+                highscore += (250 - (self.application.current_hint + 1) * 50)
+
+                # check personal response time record
+                if record:
+                    # update time record in database
+                    updateResponseTime = collab.trivia.setResponseTimeRecord(username, myResponseTime)
+
+                    # world record?
+                    if myResponseTime < self.application.responseTimeRecord.responseTime:
+                        # update record holder data
+                        self.application.responseTimeRecord.responseTime = myResponseTime
+                        self.application.responseTimeRecord.username = username
+                        recordType = "world"
+                    else:
+                        recordType = "personal"
+
+                    #msg.log("New " + recordType + " record by " + username + " with " + myResponseTime + " seconds.")
+
+                    # update responseTimeRecord on winning client
+                    newClient.call("updateResponseRecord", myResponseTime)
+
+                # update highscore in database
+                updateHighscore = collab.trivia.setHighscore(username, highscore)
+
+                # update highscore on winning client
+                newClient.call("updateHighscore", highscore)
+
+                # clear old intervals
+                clearInterval(self.application.theHints)
+
+                # start new question after few seconds
+                self.application.startupQuestion = setInterval(startNewQuestion, newQuestion_Interval)
+
+            # the answer is not correct
+            else:
+
+                # send clients the incorrect answer
+                for client in self.application.clients:
+                    if self.application.clients[client].trivia == True:
+                        self.application.clients[client].call("chatMessage", answer, username)
+
+        # answered too late
+        else:
+            # but it's the right answer
+            if myAnswer == True:
+                # the amount of seconds the answer came late
+                difference = String(myResponseTime-self.application.responseTimeRecord.time).substr(0, 5)
+
+                # add difference to message
+                answer += "    <b>(+" + difference + " sec.)</b>"
+
+                #log.msg("LATE " + username + " gave the right answer but " + difference + " seconds too late.")
+
+            # send clients the late (in)correct answer
+            for client in self.application.clients:
+                if self.application.clients[client].trivia == True:
+                    self.application.clients[client].call("chatMessage", answer, username)
 
 
     def invokeOnClient(self, data):
@@ -62,17 +170,22 @@ class TriviaApplication(Application):
     """
 
     client = TriviaClient
-    service_path = 'trivia'
     appAgent = 'RTMP-Trivia/%s' % str(__version__)
-    questions = []
+    
     question_interval = 4
     hint_interval = 12
     current_hint = 0
     startup_time = 0
     total_hints = 3
 
-    def __init__(self, gateway='http://localhost:8000/gateway'):
+    def __init__(self, gateway='http://localhost:8000/gateway',
+                       service_path='trivia'):
         self.gateway = gateway
+        self.questions = []
+        self.to_ask_questions = []
+        self.winner = False
+        self.service_path = service_path
+        
         Application.__init__(self)
 
 
@@ -86,6 +199,10 @@ class TriviaApplication(Application):
         log.msg("URI: %s" % client.uri)
         log.msg("")
 
+        #client.username = userName
+        #client.trivia = False
+        #client.highscore = 0
+            
         result = self._load_questions()
 
         return result
@@ -129,7 +246,6 @@ class TriviaApplication(Application):
         Handle startup.
         """
         self.questions = result
-        self.to_ask_questions = self.questions[:]
 
         # XXX: save the array in sharedobject (rtmpy ticket #46)
         #self.setAttribute("askedQuestions", self.questions)
@@ -186,14 +302,13 @@ class TriviaApplication(Application):
             # TODO: load response record data
             #self.responseTimeRecord = result[1].items[0]
             #self.responseTimeRecord.username = result[2].items[0].username
-
             #log.msg("Current world record by '%s", 3,
             #         self.responseTimeRecord.username + "' with " +
             #         self.responseTimeRecord.responseTime + " seconds.", 38)
 
             # start with first question
             self._next_question()
-            
+
         else:
             log.err("No questions found! Returned: %s" % (
                 str(self.questions)))
@@ -203,6 +318,10 @@ class TriviaApplication(Application):
         """
         Picks a random new question and notifies all connected clients.
         """
+        if len(self.to_ask_questions) == 0:
+            log.msg("Restarting...")
+            self.to_ask_questions = self.questions[:]
+
         # pick a random question
         rnd_question_index = randint(1, len(self.to_ask_questions)) - 1
         current_question = self.to_ask_questions[rnd_question_index]

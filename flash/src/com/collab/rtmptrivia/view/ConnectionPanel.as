@@ -28,7 +28,7 @@ package com.collab.rtmptrivia.view
 	{
 		private const CONNECT			: String = "Connect";
 		private const DISCONNECT		: String = "Disconnect";
-		private const SERVICE_NAME		: String = "invokeOnClient";
+		private const SERVICE_NAME		: String = "playTrivia";
 		
 		private var _status				: RichEditableText;
 		private var _submit				: Button;
@@ -71,16 +71,24 @@ package com.collab.rtmptrivia.view
 		{
 			super.createChildren();
 			
-			// netconnection
-			if ( !_nc )
+			// client
+			if ( !_client )
 			{
 				_client = new TriviaClient();
 				_client.addEventListener( TriviaEvent.NEW_HINT, callbackHandler );
-				_client.addEventListener( TriviaEvent.SHOW_ANSWER, callbackHandler );
 				_client.addEventListener( TriviaEvent.NEW_QUESTION, callbackHandler );
-				
+				_client.addEventListener( TriviaEvent.SHOW_ANSWER, callbackHandler );
+				_client.addEventListener( TriviaEvent.CORRECT_ANSWER, callbackHandler );
+				_client.addEventListener( TriviaEvent.CHAT_MESSAGE, callbackHandler );
+				_client.addEventListener( TriviaEvent.UPDATE_RESPONSE_RECORD, callbackHandler );
+				_client.addEventListener( TriviaEvent.UPDATE_HIGHSCORE, callbackHandler );
+			}
+			
+			// netconnection
+			if ( !_nc )
+			{
 				_nc = new NetConnection();
-				// XXX: remove when rtmpy ticket #132 is resolved
+				// XXX: switch to AMF3 when rtmpy ticket #132 is resolved
 				_nc.objectEncoding = ObjectEncoding.AMF0;
 				_nc.client = _client;
 				_nc.addEventListener( NetStatusEvent.NET_STATUS, onStatus );
@@ -144,7 +152,7 @@ package com.collab.rtmptrivia.view
 		
 		private function call():void
 		{
-			var param:String = "Hello world!";
+			var param:Boolean = true;
 			
 			log( "\nCalling '" + SERVICE_NAME + "' with param: " + param );
 			
@@ -241,6 +249,14 @@ package com.collab.rtmptrivia.view
 				
 				case TriviaEvent.SHOW_ANSWER:
 					log( "Answer: " + event.answer );
+					break;
+				
+				case TriviaEvent.CHAT_MESSAGE:
+					log( event.username + ": " + event.message );
+					break;
+				
+				default:
+					log( event );
 					break;
 			}
 		}
