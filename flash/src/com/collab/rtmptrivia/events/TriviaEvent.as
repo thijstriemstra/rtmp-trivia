@@ -36,11 +36,24 @@ package com.collab.rtmptrivia.events
 		private var _question  						: Object;
 		private var _username						: String;
 		private var _message						: String;
+		private var _score							: Number;
 		
 		// ====================================================================
 		// GETTER/SETTER
 		// ====================================================================
 		
+		/**
+		 * @return 
+		 */		
+		public function get score():Number
+		{
+			return _score;
+		}
+		public function set score(value:Number):void
+		{
+			_score = value;
+		}
+
 		/**
 		 * @return 
 		 */		
@@ -149,6 +162,10 @@ package com.collab.rtmptrivia.events
 				
 				case CHAT_MESSAGE:
 					base += " username='" + _username + "' message='" + _message;
+					break;
+				
+				case UPDATE_HIGHSCORE:
+					base += " score='" + _score + "'/>";
 					break;
 			}
 			

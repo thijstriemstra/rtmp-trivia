@@ -97,5 +97,20 @@ package com.collab.rtmptrivia.net
 			dispatchEvent( _evt );
 		}
 		
+		/**
+		 * Invoked when the highscore is updated.
+		 * 
+		 * Dispatches a <code>TriviaEvent.UPDATE_HIGHSCORE</code> event.
+		 * 
+		 * @param score
+		 */		
+		public function updateHighscore( score:Number ):void
+		{
+			_evt = new TriviaEvent( TriviaEvent.UPDATE_HIGHSCORE );
+			_evt.score = score;
+			
+			dispatchEvent( _evt );
+		}
+		
 	}
 }

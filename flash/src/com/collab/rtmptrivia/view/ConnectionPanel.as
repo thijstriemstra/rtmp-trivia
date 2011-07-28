@@ -9,6 +9,12 @@ package com.collab.rtmptrivia.view
 	import flash.events.Event;
 	import flash.events.MouseEvent;
 	
+	import flashx.textLayout.conversion.ConversionType;
+	import flashx.textLayout.conversion.TextConverter;
+	import flashx.textLayout.elements.ParagraphElement;
+	import flashx.textLayout.elements.SpanElement;
+	import flashx.textLayout.elements.TextFlow;
+	
 	import mx.events.FlexEvent;
 	
 	import spark.components.Button;
@@ -51,6 +57,8 @@ package com.collab.rtmptrivia.view
 		private var _input				: TextInput;
 		private var _gatewayLabel		: Label;
 		
+		private var _flow				: TextFlow;
+		private var _mainParagraph		: ParagraphElement;
 		private var _conn				: TriviaConnection;
 		private var _client				: TriviaClient;
 		private var _url				: String = "rtmp://localhost:1935/trivia";
@@ -115,14 +123,23 @@ package com.collab.rtmptrivia.view
 				_conn.addEventListener( TriviaEvent.CONNECTION_FAILED, callbackHandler );
 			}
 			
+			if ( !_flow )
+			{
+				_flow = new TextFlow();
+				_mainParagraph = new ParagraphElement();
+				_flow.addChild( _mainParagraph );
+			}
+			
 			if ( !_status )
 			{
 				_status = new RichEditableText();
 				_status.setStyle( "fontSize", 15 );
 				_status.setStyle( "paddingLeft", 5 );
+				_status.selectable = true;
 				_status.editable = false;
 				_status.percentWidth = 100;
 				_status.percentHeight = 100;
+				_status.textFlow = _flow;
 				addElement( _status );
 			}
 			
@@ -207,7 +224,9 @@ package com.collab.rtmptrivia.view
 		
 		private function log( msg:* ):void
 		{
-			_status.appendText( msg + "\n" );
+			var newFlow:TextFlow = TextConverter.importToFlow( msg + "<br/>",
+				                   TextConverter.TEXT_FIELD_HTML_FORMAT );
+			_flow.addChild( newFlow.getChildAt( 0 ));
 			
 			trace( msg );
 		}
@@ -231,7 +250,7 @@ package com.collab.rtmptrivia.view
 						break;
 					
 					case DISCONNECT:
-						log( "\nDisconnected." );
+						log( "<br/>Disconnected." );
 						_conn.close();
 						disconnect();
 						break;
@@ -270,19 +289,59 @@ package com.collab.rtmptrivia.view
 			switch ( event.type )
 			{
 				case TriviaEvent.NEW_HINT:
-					log( "Hint " + event.hintIndex.toString() + ": " + event.hint );
+					log( "<b><font color='#3C2F99'>Mr.Trivia: </font><font color='#4F4F4F'>HINT "+
+					     event.hintIndex.toString() +" : " + event.hint + "</font></b>" );
 					break;
 				
 				case TriviaEvent.NEW_QUESTION:
-					log( "Question: " + event.question.question );
+					log( "<b><font color='#3C2F99'>Mr.Trivia: </font><font color='#8B1212'>ID" +
+					    event.question.id + " : " + event.question.question + "</font></b>" );
 					break;
 				
 				case TriviaEvent.SHOW_ANSWER:
-					log( "Answer: " + event.answer );
+					log( "<b><font color='#3C2F99'>Mr.Trivia: </font><font color='#600000'>The correct answer: " +
+						 event.answer + "</font></b>" );
+					break;
+				
+				case TriviaEvent.CORRECT_ANSWER:
+					// print score and time
+					//showTriviaMessage("<b><font color = '#3C2F99'>Mr.Trivia: </font><font color = '#D90000'>"+
+					// username + " answered in " + responseTime + " seconds : " + points + " points for you!! Your total score: " +
+					// score +"</font></b>");
+					
+					// show record info
+					/*
+					if (recordType != "none" && recordType != undefined)
+					{
+						if (recordType == "world")
+						{
+							var kleur = "130ADC";
+							
+							_global.worldRecord = responseTime;
+							_global.worldRecordHolder = username;
+						}
+						else if (recordType == "personal")
+						{
+							var kleur = "6A9A27";
+						}
+						// print record
+						showTriviaMessage("<b><font color = '#3C2F99'>Mr.Trivia: </font><font color = '#" + kleur + "'>"+
+					    responseTime + " seconds is a new " + recordType + " record!! Wooohooo!</font></b>");
+					}
+					*/
+					log( event.answer );
 					break;
 				
 				case TriviaEvent.CHAT_MESSAGE:
-					log( event.username + ": " + event.message );
+					log( "<b>"+ event.username + "</b>: " + event.message );
+					break;
+				
+				case TriviaEvent.UPDATE_HIGHSCORE:
+					//_global.highScore = score;
+					break;
+				
+				case TriviaEvent.UPDATE_RESPONSE_RECORD:
+					//_global.personalTimeRecord = responseTime;
 					break;
 				
 				case TriviaEvent.CONNECTION_SUCCESS:
@@ -295,7 +354,7 @@ package com.collab.rtmptrivia.view
 					break;
 				
 				case TriviaEvent.CONNECTION_FAILED:
-					log( "Could not connect to " + _conn.url );
+					log( "<b><font color='#FF0000'>Could not connect to " + _conn.url + "</font></b>");
 					break;
 				
 				default:
