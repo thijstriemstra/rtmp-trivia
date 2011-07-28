@@ -9,7 +9,8 @@ Trivia game, inspired by IRC's Trivia bots.
 
 import logging
 import math
-from random import randint
+from pprint import pformat
+from random import randint, sample
 from datetime import datetime
 
 from twisted.python import log
@@ -64,7 +65,7 @@ class TriviaApplication(Application):
     service_path = 'trivia'
     appAgent = 'RTMP-Trivia/%s' % str(__version__)
     questions = []
-    newQuestion_Interval = 4
+    question_interval = 4
     hint_interval = 12
     current_hint = 0
     startup_time = 0
@@ -182,16 +183,17 @@ class TriviaApplication(Application):
 
             log.msg("Started Mr. Trivia with %s questions." % len(self.questions))
 
-            # load response record data
+            # TODO: load response record data
             #self.responseTimeRecord = result[1].items[0]
             #self.responseTimeRecord.username = result[2].items[0].username
 
-            #traceMsg("Current world record by '%s", 3,
+            #log.msg("Current world record by '%s", 3,
             #         self.responseTimeRecord.username + "' with " +
             #         self.responseTimeRecord.responseTime + " seconds.", 38)
 
             # start with first question
             self._next_question()
+            
         else:
             log.err("No questions found! Returned: %s" % (
                 str(self.questions)))
@@ -199,13 +201,12 @@ class TriviaApplication(Application):
 
     def _next_question(self):
         """
+        Picks a random new question and notifies all connected clients.
         """
         # pick a random question
         rnd_question_index = randint(1, len(self.to_ask_questions)) - 1
         current_question = self.to_ask_questions[rnd_question_index]
-
         #log.msg("current_question: %s" % current_question)
-        #log.msg("current_question.answer: %s" % current_question.answer)
 
         self.current_hint = 0
         self.winner = False
@@ -214,10 +215,9 @@ class TriviaApplication(Application):
         self.answer = current_question.answer
         #self.responseTimeRecord.time = 0
         self.scrambled_answers = self._make_hints(self.answer, self.total_hints)
-        #log.msg("scrambled_answers: %s" % str(self.scrambled_answers))
 
-        # print current question
-        log.msg("TRIVIA : QUESTION: %s   (%s/%s) : %s | %s" % (
+        #log.msg("scrambled_answers: %s" % pformat(self.scrambled_answers))
+        log.msg("TRIVIA : QUESTION ID %s - (%s/%s): %s | %s" % (
                 self.question_id,
                 (len(self.questions) - len(self.to_ask_questions)) + 1,
                 len(self.questions),
@@ -247,7 +247,7 @@ class TriviaApplication(Application):
 
             self._send_trivia_crew("newHint", deHint, self.current_hint + 1)
 
-            log.msg("TRIVIA : ///// HINT: %s      %s" %( 
+            log.msg("TRIVIA: ///// HINT %s:      %s" %( 
                     self.current_hint + 1, deHint))
 
             self.current_hint += 1
@@ -260,7 +260,7 @@ class TriviaApplication(Application):
     def _show_answer(self):
         """
         """
-        log.msg("TRIVIA : ///// ANSWER: %s" % self.answer)
+        log.msg("TRIVIA: ///// ANSWER: %s" % self.answer)
 
         # check which clients need a hint
         self._send_trivia_crew("showAnswer", self.answer)
@@ -273,7 +273,7 @@ class TriviaApplication(Application):
 
         # start new question after few seconds
         self.question_generator = LoopingCall(self._start_new_question)
-        self.question_generator.start(self.newQuestion_Interval)
+        self.question_generator.start(self.question_interval)
 
 
     def _send_trivia_crew(self, method, object1, object2=None):
@@ -293,6 +293,7 @@ class TriviaApplication(Application):
                 self.clients[i].call(method, null, object1, object2)
         """
 
+
     def _start_new_question(self):
         """
         """
@@ -303,62 +304,42 @@ class TriviaApplication(Application):
         self._next_question()
 
 
-    def _make_hints(self, answer, total_hints, hint_percentage=70):
+    def _make_hints(self, answer, total_hints, hint_percentage=70,
+                    scrambler="*"):
         """
         Create a list of hints for the answer to a question.
         """
-        total_chars = len(answer)
-        gemene_deler = 100 / (hint_percentage / total_hints)
-        per_hint = 0
-        the_hint = ""
-        relevant_tokens = 0
-        cur_hint = []
-        nr_list = []
-        hints_list = []
+        chars = []
         answer_list = []
-        whitespace = " "
-        scrambler = "*"
+        total_chars = len(answer)
 
-        # answer length
-        if total_chars > 1:
-            for a in xrange(total_chars):
-                nr_list.append(a)
-                answer_list.append(answer[a])
-
-                if answer_list[a] != whitespace:
-                    relevant_tokens += 1
-                    hints_list.append(scrambler)
-                else:
-                    hints_list.append(whitespace)
-
-            per_hint = int(math.ceil(relevant_tokens/gemene_deler))
-
-            #log.msg('total_chars: %s' % total_chars)
-            #log.msg('relevant_tokens: %s' % relevant_tokens)
-            #log.msg('answer_list: %s' % answer_list)
-            #log.msg('hints_list: %s' % hints_list)
-            #log.msg('per_hint: %s' % per_hint)
-
-            for b in xrange(total_hints):
-                for c in xrange(per_hint):
-                    rnd_nr = randint(1, len(nr_list)) - 1
-                    spliced = nr_list.pop(rnd_nr)
-
-                    if answer_list[rnd_nr] != whitespace:
-                        hints_list[rnd_nr] = answer_list[rnd_nr]
-
-                    the_hint = ""
-                    for a in xrange(total_chars):
-                        the_hint += hints_list[a]
-
-                    if the_hint != answer:
-                        lastHint = b
-                        cur_hint.append(the_hint)
-                    else:
-                        cur_hint.append(cur_hint[lastHint])
-
-            return cur_hint
-
-        # its a one char answer
-        else:
+        if total_chars == 1:
+            # single char answers
             return [scrambler, scrambler, answer]
+        for char in range(total_chars):
+            if answer[char] != " ":
+                chars.append(char)
+
+        min_chars = int(round((float(len(chars)) / 100) * float(hint_percentage)))
+        selection = sample(chars, min_chars)
+
+        #log.msg('min_chars %s' % min_chars)
+        #log.msg('actual chars %s' % len(chars))
+
+        for hint in range(total_hints):
+            hint_list = range(total_chars)
+            total_hint = ( total_chars / total_hints ) * hint + 1
+            for p in range(total_chars):
+                hint_list[p] = answer[p]
+                if hint_list[p] != " ":
+                    hint_list[p]= scrambler
+                for s in range(total_hint):
+                    try:
+                        if selection[s] == p:
+                            hint_list[p]= answer[p]
+                    except IndexError:
+                        pass
+            answer_list.append("".join(hint_list))
+
+        return answer_list
+
