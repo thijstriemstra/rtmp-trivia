@@ -10,6 +10,10 @@ package com.collab.rtmptrivia.events
 	 */	
 	public class TriviaEvent extends Event
 	{
+		// ====================================================================
+		// CONSTANTS
+		// ====================================================================
+		
 		public static const NEW_HINT				: String = "newHint";
 		public static const NEW_QUESTION			: String = "newQuestion";
 		public static const SHOW_ANSWER				: String = "showAnswer";
@@ -18,12 +22,24 @@ package com.collab.rtmptrivia.events
 		public static const UPDATE_HIGHSCORE		: String = "updateHighscore";
 		public static const UPDATE_RESPONSE_RECORD	: String = "updateResponseRecord";
 		
+		public static const CONNECTION_SUCCESS		: String = "connectionSuccess";
+		public static const CONNECTION_CLOSED		: String = "connectionClosed";
+		public static const CONNECTION_FAILED		: String = "connectionFailed";
+		
+		// ====================================================================
+		// PRIVATE VARS
+		// ====================================================================
+		
 		private var _hintIndex						: Number;
 		private var _answer  						: String;
 		private var _hint	  						: String;
 		private var _question  						: Object;
 		private var _username						: String;
 		private var _message						: String;
+		
+		// ====================================================================
+		// GETTER/SETTER
+		// ====================================================================
 		
 		/**
 		 * @return 
@@ -105,7 +121,7 @@ package com.collab.rtmptrivia.events
 		 * @param cancelable
 		 */		
 		public function TriviaEvent( type:String, bubbles:Boolean=true,
-									 cancelable:Boolean=false )
+									 cancelable:Boolean=true )
 		{
 			super( type, bubbles, cancelable );
 		}
@@ -115,12 +131,12 @@ package com.collab.rtmptrivia.events
 		 */		
 		override public function toString():String
 		{
-			var base:String = "<TriviaEvent type='" + type + "'";
+			var base:String = "<TriviaEvent type='" + type;
 			
 			switch ( type )
 			{
 				case NEW_HINT:
-					base += " index='" + _hintIndex + "' hint='" + _hint + "'/>";
+					base += " index='" + _hintIndex + "' hint='" + _hint;
 					break;
 				
 				case SHOW_ANSWER:
@@ -128,14 +144,15 @@ package com.collab.rtmptrivia.events
 					break;
 				
 				case NEW_QUESTION:
-					base += " id='" + _question.id + "' question='" + _question.question + "'/>";
+					base += " id='" + _question.id + "' question='" + _question.question;
 					break;
 				
-				default:
-					base += "/>";
+				case CHAT_MESSAGE:
+					base += " username='" + _username + "' message='" + _message;
+					break;
 			}
 			
-			return base;
+			return base + "'/>";
 		}
 		
 	}

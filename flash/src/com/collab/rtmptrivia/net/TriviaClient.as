@@ -8,16 +8,34 @@ package com.collab.rtmptrivia.net
 
 	/**
 	 * Trivia callback client. Dispatches <code>TriviaEvent</code>s to notify others
-	 * of incoming messages.
+	 * of incoming events.
 	 * 
 	 * @langversion 3.0
      * @playerversion Flash 9
 	 */	
 	public class TriviaClient extends EventDispatcher
 	{
+		// ====================================================================
+		// PRIVATE VARS
+		// ====================================================================
+		
 		private var _evt	: TriviaEvent;
 		
 		/**
+		 * Creates a new TriviaClient object. 
+		 */		
+		public function TriviaClient()
+		{
+			super();
+		}
+		
+		// ====================================================================
+		// PUBLIC CALLBACK METHODS
+		// ====================================================================
+		
+		/**
+		 * Invoked when the trivia game sends a new hint.
+		 *  
 		 * Dispatches a <code>TriviaEvent.NEW_HINT</code> event.
 		 * 
 		 * @param hint
@@ -33,6 +51,8 @@ package com.collab.rtmptrivia.net
 		}
 		
 		/**
+		 * Invoked when the answer wasn't guessed.
+		 *  
 		 * Dispatches a <code>TriviaEvent.SHOW_ANSWER</code> event.
 		 * 
 		 * @param answer
@@ -46,6 +66,8 @@ package com.collab.rtmptrivia.net
 		}
 		
 		/**
+		 * Invoked when a new trivia question is received.
+		 * 
 		 * Dispatches a <code>TriviaEvent.NEW_QUESTION</code> event.
 		 * 
 		 * @param question
@@ -59,6 +81,8 @@ package com.collab.rtmptrivia.net
 		}
 		
 		/**
+		 * Invoked when a chat message is received.
+		 * 
 		 * Dispatches a <code>TriviaEvent.CHAT_MESSAGE</code> event.
 		 * 
 		 * @param message

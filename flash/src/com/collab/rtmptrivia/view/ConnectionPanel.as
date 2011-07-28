@@ -4,13 +4,10 @@ package com.collab.rtmptrivia.view
 {
 	import com.collab.rtmptrivia.events.TriviaEvent;
 	import com.collab.rtmptrivia.net.TriviaClient;
+	import com.collab.rtmptrivia.net.TriviaConnection;
 	
 	import flash.events.Event;
 	import flash.events.MouseEvent;
-	import flash.events.NetStatusEvent;
-	import flash.events.SecurityErrorEvent;
-	import flash.net.NetConnection;
-	import flash.net.ObjectEncoding;
 	
 	import mx.events.FlexEvent;
 	
@@ -34,11 +31,17 @@ package com.collab.rtmptrivia.view
 	 */	
 	public class ConnectionPanel extends Panel
 	{
+		// ====================================================================
+		// CONSTANTS
+		// ====================================================================
+		
 		private const CONNECT			: String = "Connect";
 		private const DISCONNECT		: String = "Disconnect";
 		private const JOIN				: String = "Join";
-		private const JOIN_SERVICE		: String = "playTrivia";
-		private const ANSWER_SERVICE	: String = "giveAnswer";
+		
+		// ====================================================================
+		// PRIVATE VARS
+		// ====================================================================
 		
 		private var _status				: RichEditableText;
 		private var _connect			: Button;
@@ -48,16 +51,17 @@ package com.collab.rtmptrivia.view
 		private var _input				: TextInput;
 		private var _gatewayLabel		: Label;
 		
+		private var _conn				: TriviaConnection;
+		private var _client				: TriviaClient;
 		private var _url				: String = "rtmp://localhost:1935/trivia";
-		private var _nc					: NetConnection;
 		private var _title				: String;
 		private var _username			: String;
-		private var _client				: TriviaClient;
 		
 		/**
 		 * Creates a new ConnectionPanel object.
 		 * 
 		 * @param title		Title for the panel.
+		 * @param username	Initial username.
 		 */		
 		public function ConnectionPanel( title:String="Trivia", username:String="User1" )
 		{
@@ -69,6 +73,10 @@ package com.collab.rtmptrivia.view
 			this.layout = new VerticalLayout();
 			this.controlBarVisible = true;
 		}
+		
+		// ====================================================================
+		// OVERRIDES
+		// ====================================================================
 		
 		/**
 		 * @private 
@@ -87,7 +95,6 @@ package com.collab.rtmptrivia.view
 		{
 			super.createChildren();
 			
-			// client
 			if ( !_client )
 			{
 				_client = new TriviaClient();
@@ -100,18 +107,14 @@ package com.collab.rtmptrivia.view
 				_client.addEventListener( TriviaEvent.UPDATE_HIGHSCORE, callbackHandler );
 			}
 			
-			// netconnection
-			if ( !_nc )
+			if ( !_conn )
 			{
-				_nc = new NetConnection();
-				// XXX: switch to AMF3 when rtmpy ticket #132 is resolved
-				_nc.objectEncoding = ObjectEncoding.AMF0;
-				_nc.client = _client;
-				_nc.addEventListener( NetStatusEvent.NET_STATUS, onStatus );
-				_nc.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );
+				_conn = new TriviaConnection();
+				_conn.addEventListener( TriviaEvent.CONNECTION_SUCCESS, callbackHandler );
+				_conn.addEventListener( TriviaEvent.CONNECTION_CLOSED, callbackHandler );
+				_conn.addEventListener( TriviaEvent.CONNECTION_FAILED, callbackHandler );
 			}
 			
-			// status field
 			if ( !_status )
 			{
 				_status = new RichEditableText();
@@ -190,10 +193,9 @@ package com.collab.rtmptrivia.view
 		
 		private function connect():void
 		{
-			log( "" );
-			log( "Connecting to " + _url + " with username: " + _username );
+			trace( "Connecting to " + _url + " with username: " + _username );
 			
-			_nc.connect( _url, _username );
+			_conn.connect( _url, _username, _client );
 		}
 		
 		private function disconnect():void
@@ -203,23 +205,6 @@ package com.collab.rtmptrivia.view
 			_input.text = "";
 		}
 		
-		private function join():void
-		{
-			var param:Boolean = true;
-			
-			trace( "\nCalling '" + JOIN_SERVICE + "' with param: " + param );
-			
-			_submit.enabled = _input.enabled = true;
-			_nc.call( JOIN_SERVICE, null, param );
-		}
-		
-		private function giveAnswer( answer:String ):void
-		{
-			trace( "Calling '" + ANSWER_SERVICE + "' with answer: " + answer );
-			
-			_nc.call( ANSWER_SERVICE, null, answer, _username, 0 );
-		}
-		
 		private function log( msg:* ):void
 		{
 			_status.appendText( msg + "\n" );
@@ -227,15 +212,9 @@ package com.collab.rtmptrivia.view
 			trace( msg );
 		}
 		
-		private function onResult( result:Object ):void
-		{
-			log( "call.onResult: " + result );	
-		}
-		
-		private function onFault( fault:Object ):void
-		{
-			log( "call.onFault: " + fault );	
-		}
+		// ====================================================================
+		// EVENT HANDLERS
+		// ====================================================================
 		
 		private function connectClickHandler( event:MouseEvent ):void
 		{
@@ -252,8 +231,8 @@ package com.collab.rtmptrivia.view
 						break;
 					
 					case DISCONNECT:
-						log( "\nDisconnecting..." );
-						_nc.close();
+						log( "\nDisconnected." );
+						_conn.close();
 						disconnect();
 						break;
 				}
@@ -270,42 +249,18 @@ package com.collab.rtmptrivia.view
 			{
 				_input.text = "";
 				
-				giveAnswer( msg );
+				_conn.answer( msg );
 			}
 		}
 		
 		private function joinClickHandler( event:MouseEvent ):void
 		{
-			if ( _nc.connected )
+			if ( _conn.connected )
 			{
-				join();
-			}
-		}
-		
-		private function onStatus( event:NetStatusEvent ):void
-		{
-			log( event.info.code );
-			
-			switch ( event.info.code )
-			{
-				case "NetConnection.Connect.Success":
-					_connect.label = DISCONNECT;
-					_join.enabled = true;
-					break;
+				_submit.enabled = _input.enabled = true;
 				
-				case "NetConnection.Connect.Closed":
-					disconnect();
-					break;
-				
-				case "NetConnection.Connect.Failed":
-					log( "Could not connect to " + _url );
-					break;
+				_conn.join();
 			}
-		}
-		
-		private function onError( event:SecurityErrorEvent ):void
-		{
-			log( event );	
 		}
 		
 		private function callbackHandler( event:TriviaEvent ):void
@@ -328,6 +283,19 @@ package com.collab.rtmptrivia.view
 				
 				case TriviaEvent.CHAT_MESSAGE:
 					log( event.username + ": " + event.message );
+					break;
+				
+				case TriviaEvent.CONNECTION_SUCCESS:
+					_connect.label = DISCONNECT;
+					_join.enabled = true;
+					break;
+				
+				case TriviaEvent.CONNECTION_CLOSED:
+					disconnect();
+					break;
+				
+				case TriviaEvent.CONNECTION_FAILED:
+					log( "Could not connect to " + _conn.url );
 					break;
 				
 				default:
