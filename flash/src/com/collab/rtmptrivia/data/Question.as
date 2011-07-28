@@ -1,6 +1,6 @@
 // Copyright (c) The rtmp-trivia Project.
 // See LICENSE.txt for details.
-package com.collab.rtmptrivia
+package com.collab.rtmptrivia.data
 {
 	[RemoteClass(alias="com.collab.rtmptrivia.Question")]
 	/**

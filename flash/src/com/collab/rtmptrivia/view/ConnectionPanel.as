@@ -1,8 +1,9 @@
 // Copyright (c) The rtmp-trivia Project.
 // See LICENSE.txt for details.
-package com.collab.rtmptrivia
+package com.collab.rtmptrivia.view
 {
 	import com.collab.rtmptrivia.events.TriviaEvent;
+	import com.collab.rtmptrivia.net.TriviaClient;
 	
 	import flash.events.MouseEvent;
 	import flash.events.NetStatusEvent;
@@ -19,6 +20,9 @@ package com.collab.rtmptrivia
 	/**
 	 * Simple fullsize text area (without scroll bars), with ability to
 	 * specify custom gateway url, connect/disconnect and make calls.
+	 * 
+	 * @langversion 3.0
+     * @playerversion Flash 10
 	 */	
 	public class ConnectionPanel extends Panel
 	{
@@ -34,7 +38,7 @@ package com.collab.rtmptrivia
 		private var _url				: String = "rtmp://localhost:1935/trivia";
 		private var _nc					: NetConnection;
 		private var _title				: String;
-		private var _client				: TestClient;
+		private var _client				: TriviaClient;
 		
 		/**
 		 * Creates a new ConnectionPanel object.
@@ -70,7 +74,7 @@ package com.collab.rtmptrivia
 			// netconnection
 			if ( !_nc )
 			{
-				_client = new TestClient();
+				_client = new TriviaClient();
 				_client.addEventListener( TriviaEvent.NEW_HINT, callbackHandler );
 				_client.addEventListener( TriviaEvent.SHOW_ANSWER, callbackHandler );
 				_client.addEventListener( TriviaEvent.NEW_QUESTION, callbackHandler );

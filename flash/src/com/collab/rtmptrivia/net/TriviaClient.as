@@ -1,15 +1,19 @@
 // Copyright (c) The rtmp-trivia Project.
 // See LICENSE.txt for details.
-package com.collab.rtmptrivia
+package com.collab.rtmptrivia.net
 {
 	import com.collab.rtmptrivia.events.TriviaEvent;
 	
 	import flash.events.EventDispatcher;
 
 	/**
-	 * RTMP callback client.
+	 * Trivia callback client. Dispatches <code>TriviaEvent</code>s to notify others
+	 * of incoming messages.
+	 * 
+	 * @langversion 3.0
+     * @playerversion Flash 9
 	 */	
-	public class TestClient extends EventDispatcher
+	public class TriviaClient extends EventDispatcher
 	{
 		private var _evt	: TriviaEvent;
 		

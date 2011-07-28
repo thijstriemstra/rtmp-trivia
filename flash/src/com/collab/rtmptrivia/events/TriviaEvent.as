@@ -5,7 +5,8 @@ package com.collab.rtmptrivia.events
 	import flash.events.Event;
 	
 	/**
-	 * 
+	 * @langversion 3.0
+     * @playerversion Flash 9
 	 */	
 	public class TriviaEvent extends Event
 	{
@@ -79,6 +80,9 @@ package com.collab.rtmptrivia.events
 			super( type, bubbles, cancelable );
 		}
 		
+		/**
+		 * @private 
+		 */		
 		override public function toString():String
 		{
 			var base:String = "<TriviaEvent type='" + type + "'";
