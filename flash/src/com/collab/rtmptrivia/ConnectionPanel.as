@@ -19,8 +19,6 @@ package com.collab.rtmptrivia
 	/**
 	 * Simple fullsize text area (without scroll bars), with ability to
 	 * specify custom gateway url, connect/disconnect and make calls.
-	 * 
-	 * @author Thijs Triemstra
 	 */	
 	public class ConnectionPanel extends Panel
 	{
@@ -72,7 +70,7 @@ package com.collab.rtmptrivia
 			if ( !_nc )
 			{
 				_nc = new NetConnection();
-				// XXX: remove when #132 is resolved
+				// XXX: remove when rtmpy ticket #132 is resolved
 				_nc.objectEncoding = ObjectEncoding.AMF0;
 				_nc.client = new TestClient();
 				_nc.addEventListener( NetStatusEvent.NET_STATUS, onStatus );

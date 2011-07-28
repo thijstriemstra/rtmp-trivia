@@ -12,9 +12,8 @@ from sqlalchemy import Table
 
 
 class Question(object):
-    def __init__(self, id=None, answer=None, question=None):
-        self.answer = answer
-        self.question = Question
+    def __init__(self, id=None, question=None):
+        self.question = question
         self.id = id
 
 

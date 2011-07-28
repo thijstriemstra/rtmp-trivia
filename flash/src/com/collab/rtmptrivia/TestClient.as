@@ -3,21 +3,33 @@
 package com.collab.rtmptrivia
 {
 	/**
-	 * @author Thijs Triemstra
+	 * RTMP callback client.
 	 */	
 	public class TestClient
 	{
-		public var test	: String = "123";
+		/**
+		 * @param hint
+		 * @param index
+		 */		
+		public function newHint(hint:String, index:Number):void
+		{
+			trace('newHint: ' + index.toString() + " - " + hint);
+		}
 		
 		/**
-		 * @param param
-		 * @return 
+		 * @param answer
 		 */		
-		public function some_method( param:String ):TestClient
+		public function showAnswer(answer:String):void
 		{
-			trace( "some_method(" + param + ")" );
-			
-			return new TestClient();
+			trace('showAnswer: ' + answer);
+		}
+		
+		/**
+		 * @param question
+		 */		
+		public function newQuestion(question:Object):void
+		{
+			trace('newQuestion: ' + question.question);
 		}
 		
 	}

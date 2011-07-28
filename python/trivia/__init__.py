@@ -8,7 +8,7 @@ Trivia game, inspired by IRC's Trivia bots.
 """
 
 import logging
-import math
+from copy import copy
 from pprint import pformat
 from random import randint, sample
 from datetime import datetime
@@ -229,7 +229,10 @@ class TriviaApplication(Application):
         self.hint_generator.start(self.hint_interval)
 
         # send question to clients
-        self._send_trivia_crew("newQuestion", current_question)
+        new_question = copy(current_question)
+        del new_question.answer
+        self._send_trivia_crew("newQuestion", new_question)
+        del new_question
 
         # remove question from list
         self.to_ask_questions.pop(rnd_question_index)
@@ -279,20 +282,19 @@ class TriviaApplication(Application):
     def _send_trivia_crew(self, method, object1, object2=None):
         """
         """
-        #log.msg('send trivia crew: %s' % method)
-
         # check which clients need a question
-        """
-        for i in xrange(len(self.clients)):
+        for client in self.clients:
+            """
             if self.clients[i].trivia:
                 log.msg("client '%s' is playin trivia: '%s'" %s (
                         self.clients[i].id,
                         self.clients[i].trivia))
-
-                # give the client a new question
-                self.clients[i].call(method, null, object1, object2)
-        """
-
+            """
+            # give the client a new question
+            if object2:
+                self.clients[client].call(method, object1, object2)
+            else:
+                self.clients[client].call(method, object1)
 
     def _start_new_question(self):
         """
