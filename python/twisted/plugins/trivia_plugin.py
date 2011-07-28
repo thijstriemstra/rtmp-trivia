@@ -59,7 +59,7 @@ class WebServer(Site):
         """
 
         # Map ActionScript classes to Python
-        register_class(Question, namespace + '.RemoteClass')
+        register_class(Question, namespace + '.Question')
 
         # remoting gateway
         gateway = TwistedGateway(services, expose_request=False,
@@ -169,7 +169,7 @@ class TriviaServiceMaker(object):
 
         # db connection
         engine = create_engine(options['database'])
-        connection = engine.connect()
+        engine.connect()
         meta = MetaData()
         meta.bind = engine
         logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)

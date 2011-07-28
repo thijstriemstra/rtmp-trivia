@@ -38,9 +38,9 @@ class TriviaClient(Client):
         """
         subscribe to the trivia game
         """
-        log.msg('playTrivia: %s' % join)
-
         self.trivia = join
+        
+        log.msg('playTrivia: %s' % self.trivia)
 
 
     def giveAnswer(self, answer, username, highscore, myResponseTime=None, record=None):
@@ -52,7 +52,6 @@ class TriviaClient(Client):
         @param highscore: Highscore for this client. 
         """
         myAnswer = answer.lower() == self.application.answer.lower()
-        log.msg('answer: %s' % myAnswer)
 
         # XXX: its a time record, but maybe not the first person to give the right answer
         #if record:
@@ -189,20 +188,23 @@ class TriviaApplication(Application):
         Application.__init__(self)
 
 
-    def onConnect(self, client):
+    def onConnect(self, client, username):
         """
         """
         log.msg(60 * "-")
         log.msg("New client connection for '%s' application from client: %s" % (
                 self.name, client.id))
+        log.msg("Username: %s" % username)
         log.msg("Flash Player: %s" % client.agent)
         log.msg("URI: %s" % client.uri)
         log.msg("")
 
-        #client.username = userName
-        #client.trivia = False
-        #client.highscore = 0
-            
+        # configure client
+        client.username = username
+        client.trivia = False
+        client.highscore = 0
+        
+        # load questions
         result = self._load_questions()
 
         return result
@@ -218,12 +220,6 @@ class TriviaApplication(Application):
         """
         @note: `onAppStart` is not fully implemented in RTMPy, see ticket #138
         """
-        log.msg(60 * "=")
-        # XXX: print server version
-        #log.msg("Server version: %s." % server.getVersion())
-        log.msg("Trivia Gateway: %s" % self.gateway)
-        log.msg(60 * "=")
-
         # create Mr. Trivia
         if self.name == "trivia":
             # XXX: no shared object support yet (rtmpy ticket #46)

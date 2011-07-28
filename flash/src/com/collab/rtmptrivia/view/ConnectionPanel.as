@@ -5,16 +5,24 @@ package com.collab.rtmptrivia.view
 	import com.collab.rtmptrivia.events.TriviaEvent;
 	import com.collab.rtmptrivia.net.TriviaClient;
 	
+	import flash.events.Event;
 	import flash.events.MouseEvent;
 	import flash.events.NetStatusEvent;
 	import flash.events.SecurityErrorEvent;
 	import flash.net.NetConnection;
 	import flash.net.ObjectEncoding;
 	
+	import mx.events.FlexEvent;
+	
 	import spark.components.Button;
+	import spark.components.HGroup;
+	import spark.components.Label;
 	import spark.components.Panel;
 	import spark.components.RichEditableText;
 	import spark.components.TextInput;
+	import spark.layouts.HorizontalAlign;
+	import spark.layouts.HorizontalLayout;
+	import spark.layouts.VerticalAlign;
 	import spark.layouts.VerticalLayout;
 	
 	/**
@@ -28,16 +36,22 @@ package com.collab.rtmptrivia.view
 	{
 		private const CONNECT			: String = "Connect";
 		private const DISCONNECT		: String = "Disconnect";
-		private const SERVICE_NAME		: String = "playTrivia";
+		private const JOIN				: String = "Join";
+		private const JOIN_SERVICE		: String = "playTrivia";
+		private const ANSWER_SERVICE	: String = "giveAnswer";
 		
 		private var _status				: RichEditableText;
+		private var _connect			: Button;
+		private var _join				: Button;
 		private var _submit				: Button;
-		private var _call				: Button;
-		private var _gateway			: TextInput;
+		private var _host				: TextInput;
+		private var _input				: TextInput;
+		private var _gatewayLabel		: Label;
 		
 		private var _url				: String = "rtmp://localhost:1935/trivia";
 		private var _nc					: NetConnection;
 		private var _title				: String;
+		private var _username			: String;
 		private var _client				: TriviaClient;
 		
 		/**
@@ -45,9 +59,11 @@ package com.collab.rtmptrivia.view
 		 * 
 		 * @param title		Title for the panel.
 		 */		
-		public function ConnectionPanel( title:String="Trivia" )
+		public function ConnectionPanel( title:String="Trivia", username:String="User1" )
 		{
 			super();
+			
+			_username = username;
 			
 			this.title = title;
 			this.layout = new VerticalLayout();
@@ -107,56 +123,101 @@ package com.collab.rtmptrivia.view
 				addElement( _status );
 			}
 			
-			if ( !_gateway )
+			if ( !_gatewayLabel )
 			{
-				_gateway = new TextInput();
-				_gateway.text = _url;
-				_gateway.percentWidth = 100;
+				_gatewayLabel = new Label();
+				_gatewayLabel.text = "Host:";
+			}
+			
+			if ( !_host )
+			{
+				_host = new TextInput();
+				_host.text = _url;
+				_host.width = 200;
+			}
+			
+			if ( !_connect )
+			{
+				_connect = new Button();
+				_connect.label = CONNECT;
+				_connect.minWidth = 90;
+				_connect.addEventListener( MouseEvent.CLICK, connectClickHandler );
+			}
+			
+			if ( !_join )
+			{
+				_join = new Button();
+				_join.enabled = false;
+				_join.label = JOIN;
+				_join.addEventListener( MouseEvent.CLICK, joinClickHandler );
+			}
+			
+			if ( !_input )
+			{
+				var gr:HGroup = new HGroup();
+				gr.verticalAlign = VerticalAlign.MIDDLE;
+				gr.percentWidth = 100;
+				gr.paddingLeft = 40;
+				
+				_input = new TextInput();
+				_input.addEventListener( FlexEvent.ENTER, submitHandler );
+				_input.enabled = false;
+				_input.percentWidth = 100;
+				gr.addElement( _input );
 			}
 			
 			if ( !_submit )
 			{
 				_submit = new Button();
-				_submit.label = CONNECT;
+				_submit.label = "Send";
+				_submit.enabled = false;
 				_submit.minWidth = 90;
-				_submit.addEventListener( MouseEvent.CLICK, onSubmit );
-			}
-			
-			if ( !_call )
-			{
-				_call = new Button();
-				_call.enabled = false;
-				_call.label = "Call";
-				_call.addEventListener( MouseEvent.CLICK, onCall );
+				_submit.addEventListener( MouseEvent.CLICK, submitHandler );
+				gr.addElement( _submit );
 			}
 
 			if ( !controlBarContent )
 			{
-				controlBarContent = [ _gateway, _submit, _call ];
+				controlBarContent = [ _gatewayLabel, _host, _connect, _join,
+					                  gr ];
+				var l:HorizontalLayout = new HorizontalLayout();
+				l.horizontalAlign = HorizontalAlign.CENTER;
+				l.verticalAlign = VerticalAlign.MIDDLE;
+				l.paddingBottom = l.paddingTop = l.paddingLeft = l.paddingRight = 15;
+				controlBarLayout = l;
 			}
 		}
 		
 		private function connect():void
 		{
 			log( "" );
-			log( "Connecting to " + _url );
+			log( "Connecting to " + _url + " with username: " + _username );
 			
-			_nc.connect( _url );
+			_nc.connect( _url, _username );
 		}
 		
 		private function disconnect():void
 		{
-			_submit.label = CONNECT;
-			_call.enabled = false;
+			_connect.label = CONNECT;
+			_join.enabled = _submit.enabled = _input.enabled = false;
+			_input.text = "";
 		}
 		
-		private function call():void
+		private function join():void
 		{
 			var param:Boolean = true;
 			
-			log( "\nCalling '" + SERVICE_NAME + "' with param: " + param );
+			trace( "\nCalling '" + JOIN_SERVICE + "' with param: " + param );
 			
-			_nc.call( SERVICE_NAME, null, param );
+			_submit.enabled = _input.enabled = true;
+			_nc.call( JOIN_SERVICE, null, param );
+		}
+		
+		private function giveAnswer( answer:String ):void
+		{
+			trace( "Calling '" + ANSWER_SERVICE + "' with answer: " + answer );
+			
+			_nc.call( ANSWER_SERVICE, null, answer, _username, 0 );
 		}
 		
 		private function log( msg:* ):void
@@ -176,15 +237,15 @@ package com.collab.rtmptrivia.view
 			log( "call.onFault: " + fault );	
 		}
 		
-		private function onSubmit( event:MouseEvent ):void
+		private function connectClickHandler( event:MouseEvent ):void
 		{
-			var url:String = _gateway.text;
+			var url:String = _host.text;
 			
 			if ( url.length > 0 )
 			{
 				_url = url;
 			
-				switch ( _submit.label )
+				switch ( _connect.label )
 				{
 					case CONNECT:
 						connect();
@@ -199,11 +260,25 @@ package com.collab.rtmptrivia.view
 			}
 		}
 		
-		private function onCall( event:MouseEvent ):void
+		private function submitHandler( event:Event ):void
+		{
+			event.stopImmediatePropagation();
+			
+			var msg:String = _input.text;
+			
+			if ( msg.length > 0 )
+			{
+				_input.text = "";
+				
+				giveAnswer( msg );
+			}
+		}
+		
+		private function joinClickHandler( event:MouseEvent ):void
 		{
 			if ( _nc.connected )
 			{
-				call();
+				join();
 			}
 		}
 		
@@ -214,8 +289,8 @@ package com.collab.rtmptrivia.view
 			switch ( event.info.code )
 			{
 				case "NetConnection.Connect.Success":
-					_submit.label = DISCONNECT;
-					_call.enabled = true;
+					_connect.label = DISCONNECT;
+					_join.enabled = true;
 					break;
 				
 				case "NetConnection.Connect.Closed":
