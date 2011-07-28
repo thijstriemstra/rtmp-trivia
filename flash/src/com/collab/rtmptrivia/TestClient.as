@@ -2,34 +2,47 @@
 // See LICENSE.txt for details.
 package com.collab.rtmptrivia
 {
+	import com.collab.rtmptrivia.events.TriviaEvent;
+	
+	import flash.events.EventDispatcher;
+
 	/**
 	 * RTMP callback client.
 	 */	
-	public class TestClient
+	public class TestClient extends EventDispatcher
 	{
+		private var _evt	: TriviaEvent;
+		
 		/**
 		 * @param hint
 		 * @param index
 		 */		
-		public function newHint(hint:String, index:Number):void
+		public function newHint( hint:String, index:Number ):void
 		{
-			trace('newHint: ' + index.toString() + " - " + hint);
+			_evt = new TriviaEvent( TriviaEvent.NEW_HINT );
+			_evt.hintIndex = index;
+			_evt.hint = hint;
+			dispatchEvent( _evt );
 		}
 		
 		/**
 		 * @param answer
 		 */		
-		public function showAnswer(answer:String):void
+		public function showAnswer( answer:String ):void
 		{
-			trace('showAnswer: ' + answer);
+			_evt = new TriviaEvent( TriviaEvent.SHOW_ANSWER );
+			_evt.answer = answer;
+			dispatchEvent( _evt );
 		}
 		
 		/**
 		 * @param question
 		 */		
-		public function newQuestion(question:Object):void
+		public function newQuestion( question:Object ):void
 		{
-			trace('newQuestion: ' + question.question);
+			_evt = new TriviaEvent( TriviaEvent.NEW_QUESTION );
+			_evt.question = question;
+			dispatchEvent( _evt );
 		}
 		
 	}

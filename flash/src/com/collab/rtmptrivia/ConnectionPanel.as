@@ -2,13 +2,13 @@
 // See LICENSE.txt for details.
 package com.collab.rtmptrivia
 {
+	import com.collab.rtmptrivia.events.TriviaEvent;
+	
 	import flash.events.MouseEvent;
 	import flash.events.NetStatusEvent;
 	import flash.events.SecurityErrorEvent;
 	import flash.net.NetConnection;
 	import flash.net.ObjectEncoding;
-	
-	import mx.utils.ObjectUtil;
 	
 	import spark.components.Button;
 	import spark.components.Panel;
@@ -34,6 +34,7 @@ package com.collab.rtmptrivia
 		private var _url				: String = "rtmp://localhost:1935/trivia";
 		private var _nc					: NetConnection;
 		private var _title				: String;
+		private var _client				: TestClient;
 		
 		/**
 		 * Creates a new ConnectionPanel object.
@@ -69,10 +70,15 @@ package com.collab.rtmptrivia
 			// netconnection
 			if ( !_nc )
 			{
+				_client = new TestClient();
+				_client.addEventListener( TriviaEvent.NEW_HINT, callbackHandler );
+				_client.addEventListener( TriviaEvent.SHOW_ANSWER, callbackHandler );
+				_client.addEventListener( TriviaEvent.NEW_QUESTION, callbackHandler );
+				
 				_nc = new NetConnection();
 				// XXX: remove when rtmpy ticket #132 is resolved
 				_nc.objectEncoding = ObjectEncoding.AMF0;
-				_nc.client = new TestClient();
+				_nc.client = _client;
 				_nc.addEventListener( NetStatusEvent.NET_STATUS, onStatus );
 				_nc.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );
 			}
@@ -192,7 +198,6 @@ package com.collab.rtmptrivia
 		private function onStatus( event:NetStatusEvent ):void
 		{
 			log( event.info.code );
-			log( mx.utils.ObjectUtil.toString( event.info ));
 			
 			switch ( event.info.code )
 			{
@@ -214,6 +219,26 @@ package com.collab.rtmptrivia
 		private function onError( event:SecurityErrorEvent ):void
 		{
 			log( event );	
+		}
+		
+		private function callbackHandler( event:TriviaEvent ):void
+		{
+			event.stopImmediatePropagation();
+			
+			switch ( event.type )
+			{
+				case TriviaEvent.NEW_HINT:
+					log( "Hint " + event.hintIndex.toString() + ": " + event.hint );
+					break;
+				
+				case TriviaEvent.NEW_QUESTION:
+					log( "Question: " + event.question.question );
+					break;
+				
+				case TriviaEvent.SHOW_ANSWER:
+					log( "Answer: " + event.answer );
+					break;
+			}
 		}
 		
 	}
