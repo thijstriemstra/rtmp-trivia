@@ -170,27 +170,28 @@ class TriviaApplication(Application):
 
     client = TriviaClient
     appAgent = 'RTMP-Trivia/%s' % str(__version__)
-    
+
     question_interval = 4
     hint_interval = 12
-    current_hint = 0
-    startup_time = 0
     total_hints = 3
 
     def __init__(self, gateway='http://localhost:8000/gateway',
                        service_path='trivia'):
         self.gateway = gateway
+        self.service_path = service_path
         self.questions = []
         self.to_ask_questions = []
         self.winner = False
-        self.service_path = service_path
-        
+        self.current_hint = 0
+        self.startup_time = 0
+
         Application.__init__(self)
 
 
     def onConnect(self, client, username):
         """
         """
+        log.msg("")
         log.msg(60 * "-")
         log.msg("New client connection for '%s' application from client: %s" % (
                 self.name, client.id))
@@ -203,7 +204,7 @@ class TriviaApplication(Application):
         client.username = username
         client.trivia = False
         client.highscore = 0
-        
+
         # load questions
         result = self._load_questions()
 
@@ -380,10 +381,10 @@ class TriviaApplication(Application):
         """
         log.msg("TRIVIA: ///// ANSWER: %s" % self.answer)
 
-        # check which clients need a hint
+        # check which clients need the answer
         self._send_trivia_crew("showAnswer", self.answer)
 
-        # mr trivia is the winner
+        # Mr. Trivia is the winner
         self.winner = True
 
         # stop giving hints
