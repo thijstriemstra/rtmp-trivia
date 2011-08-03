@@ -53,7 +53,8 @@ class TriviaClient(Client):
         """
         myAnswer = answer.lower() == self.application.answer.lower()
 
-        # XXX: its a time record, but maybe not the first person to give the right answer
+        # XXX: its a time record, but maybe not the first person to give the
+        # right answer
         #if record:
         #    # world record?
         #    if myResponseTime < self.application.responseTimeRecord.responseTime:
@@ -63,7 +64,8 @@ class TriviaClient(Client):
         #else:
         #    recordType = "none"
 
-        # check if it's an correct answer and whether you can still win this round
+        # check if it's an correct answer and whether you can still win
+        # this round
         if myAnswer == True and self.application.winner == False:
             # send clients the correct answer
             for client in self.application.clients:

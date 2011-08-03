@@ -9,10 +9,7 @@ package com.collab.rtmptrivia.view
 	import flash.events.Event;
 	import flash.events.MouseEvent;
 	
-	import flashx.textLayout.conversion.ConversionType;
 	import flashx.textLayout.conversion.TextConverter;
-	import flashx.textLayout.elements.ParagraphElement;
-	import flashx.textLayout.elements.SpanElement;
 	import flashx.textLayout.elements.TextFlow;
 	
 	import mx.events.FlexEvent;
@@ -55,27 +52,40 @@ package com.collab.rtmptrivia.view
 		private var _submit				: Button;
 		private var _host				: TextInput;
 		private var _input				: TextInput;
-		private var _gatewayLabel		: Label;
+		private var _hostLabel			: Label;
+		private var _usernameLabel		: Label;
+		private var _username			: TextInput;
 		
 		private var _flow				: TextFlow;
-		private var _mainParagraph		: ParagraphElement;
 		private var _conn				: TriviaConnection;
 		private var _client				: TriviaClient;
 		private var _url				: String = "rtmp://localhost:1935/trivia";
 		private var _title				: String;
-		private var _username			: String;
+		
+		// ====================================================================
+		// GETTER/SETTER
+		// ====================================================================
+		
+		/**
+		 * @return 
+		 */		
+		public function get url():String
+		{
+			return _url;
+		}
+		public function set url( value:String ):void
+		{
+			_url = value;
+		}
 		
 		/**
 		 * Creates a new ConnectionPanel object.
 		 * 
 		 * @param title		Title for the panel.
-		 * @param username	Initial username.
 		 */		
-		public function ConnectionPanel( title:String="Trivia", username:String="User1" )
+		public function ConnectionPanel( title:String="Trivia" )
 		{
 			super();
-			
-			_username = username;
 			
 			this.title = title;
 			this.layout = new VerticalLayout();
@@ -126,8 +136,6 @@ package com.collab.rtmptrivia.view
 			if ( !_flow )
 			{
 				_flow = new TextFlow();
-				_mainParagraph = new ParagraphElement();
-				_flow.addChild( _mainParagraph );
 			}
 			
 			if ( !_status )
@@ -143,17 +151,16 @@ package com.collab.rtmptrivia.view
 				addElement( _status );
 			}
 			
-			if ( !_gatewayLabel )
+			if ( !_usernameLabel )
 			{
-				_gatewayLabel = new Label();
-				_gatewayLabel.text = "Host:";
+				_usernameLabel = new Label();
+				_usernameLabel.text = "Username:";
 			}
 			
-			if ( !_host )
+			if ( !_username )
 			{
-				_host = new TextInput();
-				_host.text = _url;
-				_host.width = 200;
+				_username = new TextInput();
+				_username.text = "User1";
 			}
 			
 			if ( !_connect )
@@ -198,7 +205,7 @@ package com.collab.rtmptrivia.view
 
 			if ( !controlBarContent )
 			{
-				controlBarContent = [ _gatewayLabel, _host, _connect, _join,
+				controlBarContent = [ _usernameLabel, _username, _connect, _join,
 					                  gr ];
 				var l:HorizontalLayout = new HorizontalLayout();
 				l.horizontalAlign = HorizontalAlign.CENTER;
@@ -212,7 +219,7 @@ package com.collab.rtmptrivia.view
 		{
 			trace( "Connecting to " + _url + " with username: " + _username );
 			
-			_conn.connect( _url, _username, _client );
+			_conn.connect( _url, _username.text, _client );
 		}
 		
 		private function disconnect():void
@@ -237,12 +244,11 @@ package com.collab.rtmptrivia.view
 		
 		private function connectClickHandler( event:MouseEvent ):void
 		{
-			var url:String = _host.text;
+			var username:String = _username.text;
 			
-			if ( url.length > 0 )
+			if (( url.length > 0 && username.length > 0 ) ||
+				  _connect.label == DISCONNECT )
 			{
-				_url = url;
-			
 				switch ( _connect.label )
 				{
 					case CONNECT:

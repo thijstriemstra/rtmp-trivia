@@ -4,13 +4,31 @@
 			   xmlns:mx="library://ns.adobe.com/flex/mx"
 			   xmlns:view="com.collab.rtmptrivia.view.*"
 			   width="90%" height="90%" backgroundColor="white"
-			   pageTitle="Trivia">
+			   pageTitle="Trivia" creationComplete="init(event)">
 
+	<fx:Script>
+		<![CDATA[
+			import mx.events.FlexEvent;
+
+			protected function init(event:FlexEvent):void
+			{
+				try
+				{
+					panel.url = parameters.host;
+				}
+				catch ( e:Error )
+				{
+					// 'host' flashvar not found, fallback to default
+				}
+			}
+		]]>
+	</fx:Script>
 	<s:layout>
 		<s:HorizontalLayout verticalAlign="middle" horizontalAlign="center"
 							paddingTop="30"/>
 	</s:layout>
 
-	<view:ConnectionPanel width="100%" height="100%" dropShadowVisible="false"/>
+	<view:ConnectionPanel id="panel" width="100%" height="100%"
+						  dropShadowVisible="false" />
 
 </s:Application>
