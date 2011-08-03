@@ -1,4 +1,5 @@
-Real-time Trivia game for Flash Player using RTMPy_, PyAMF_ and Plasma_.
+Real-time Trivia game for Flash Player using RTMPy_, PyAMF_, Plasma_ and
+SQLAlchemy_.
 
 Consists of:
 
@@ -19,3 +20,5 @@ Or display the options with::
 .. _RTMPy: http://www.rtmpy.org
 .. _PyAMF: http://www.pyamf.org
 .. _Plasma: http://www.plasmads.org
+.. _SQLAlchemy: http://www.sqlalchemy.org
+
