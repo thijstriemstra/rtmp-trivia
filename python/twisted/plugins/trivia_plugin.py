@@ -30,7 +30,6 @@ from plasma.version import version as plasma_version
 from sqlalchemy import __version__ as sqlalchemy_version
 from sqlalchemy import create_engine, MetaData
 
-from trivia.site import TriviaSite
 from trivia.services import TriviaRemotingService, Question
 from trivia import TriviaApplication, __version__, namespace
 
@@ -47,14 +46,13 @@ class RTMPServer(ServerFactory):
 
 class WebServer(Site):
     """
-    Webserver serving an AMF gateway and crossdomain.xml file.
+    Webserver hosting an AMF gateway and application files.
     """
 
-    def __init__(self, site, services, logLevel=logging.ERROR,
-                 gateway_path='gateway', crossdomain='crossdomain.xml',
-                 debug=False):
+    def __init__(self, resources_path, services, logLevel=logging.ERROR,
+                 gateway_path='gateway', debug=False):
         """
-        @type site: L{trivia.site.TriviaSite}
+        @type resources_path: str
         @type services: dict
         """
 
@@ -65,11 +63,8 @@ class WebServer(Site):
         gateway = TwistedGateway(services, expose_request=False,
                                  logger=logging, debug=debug)
 
-        root = Resource()
-        root.putChild('', site)
+        root = File(resources_path)
         root.putChild(gateway_path, gateway)
-        root.putChild('crossdomain.xml', File(crossdomain,
-                      defaultType='application/xml'))
 
         Site.__init__(self, root)
 
@@ -85,6 +80,11 @@ class TriviaService(service.Service):
         log.msg('')
         log.msg('Trivia %s' % str(__version__))
         log.msg(80 * '=')
+        log.msg('')
+        log.msg('Web')
+        log.msg(80 * '-')
+        log.msg('')
+        log.msg('       htdocs:      %s' % self.options['htdocs'])
         log.msg('')
         log.msg('AMF')
         log.msg(80 * '-')
@@ -126,7 +126,7 @@ class Options(usage.Options):
         ['rtmp-host', None, 'localhost', 'The interface for the RTMP server to listen on.'],
         ['rtmp-app', None, 'trivia', 'The RTMP application name.'],
         ['database', None, 'mysql+mysqldb://trivia:trivia@localhost/trivia', 'Database connection string.'],
-        ['crossdomain', None, 'crossdomain.xml', 'Path to a crossdomain.xml file.'],
+        ['htdocs', None, 'deploy', 'Path to folder for static application resources.'],
     ]
 
 
@@ -174,9 +174,6 @@ class TriviaServiceMaker(object):
         meta.bind = engine
         logging.getLogger('sqlalchemy.engine').setLevel(logging.ERROR)
 
-        # site
-        trivia_site = TriviaSite()
-
         # amf
         amf_service = TriviaRemotingService(meta)
         amf_port = int(options['amf-port'])
@@ -184,8 +181,7 @@ class TriviaServiceMaker(object):
             options['amf-service']: amf_service
         }
 
-        amf_server = WebServer( trivia_site, amf_services, logging.INFO,
-                                crossdomain=options['crossdomain'])
+        amf_server = WebServer( options['htdocs'], amf_services, logging.INFO)
 
         web_service = internet.TCPServer(amf_port, amf_server,
                                          interface=options['amf-host'])
