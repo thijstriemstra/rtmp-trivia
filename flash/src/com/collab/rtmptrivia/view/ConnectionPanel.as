@@ -55,7 +55,6 @@ package com.collab.rtmptrivia.view
 		private var _hostLabel			: Label;
 		private var _usernameLabel		: Label;
 		private var _username			: TextInput;
-		
 		private var _flow				: TextFlow;
 		private var _conn				: TriviaConnection;
 		private var _client				: TriviaClient;

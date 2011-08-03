@@ -3,7 +3,7 @@
 			   xmlns:s="library://ns.adobe.com/flex/spark" 
 			   xmlns:mx="library://ns.adobe.com/flex/mx"
 			   xmlns:view="com.collab.rtmptrivia.view.*"
-			   width="90%" height="90%" backgroundColor="white"
+			   width="100%" height="100%" backgroundColor="white"
 			   pageTitle="Trivia" creationComplete="init(event)">
 
 	<fx:Script>
@@ -23,9 +23,11 @@
 			}
 		]]>
 	</fx:Script>
+	
 	<s:layout>
 		<s:HorizontalLayout verticalAlign="middle" horizontalAlign="center"
-							paddingTop="30"/>
+							paddingTop="30" paddingLeft="30" paddingBottom="30"
+							paddingRight="30"/>
 	</s:layout>
 
 	<view:ConnectionPanel id="panel" width="100%" height="100%"
