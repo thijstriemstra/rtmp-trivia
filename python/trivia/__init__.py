@@ -44,11 +44,11 @@ class TriviaClient(Client):
         """
         self.trivia = join
 
-        log.msg('playTrivia: %s' % self.trivia)
+        #log.msg('playTrivia: %s' % self.trivia)
 
 
     def giveAnswer(self, answer, username, highscore, myResponseTime=None,
-                   record=None):
+                   record=False):
         """
         Answer to question or send chat message.
 
@@ -66,7 +66,7 @@ class TriviaClient(Client):
         myAnswer = answer.lower() == self.application.answer.lower()
 
         # XXX: its a time record, but maybe not the first person to give the
-        # right answer
+        #      right answer
         #if record:
         #    # world record?
         #    if myResponseTime < self.application.responseTimeRecord.responseTime:
@@ -76,92 +76,98 @@ class TriviaClient(Client):
         #else:
         #    recordType = "none"
 
-        # check if it's an correct answer and whether you can still win
-        # this round
+        # check if it's an correct answer and if you can still win this round
         if myAnswer == True and self.application.winner == False:
-            # send clients the correct answer
-            for client in self.application.clients:
-                if self.application.clients[client].trivia == True:
-                    # earned points
+            for i, client in self.application.clients.items():
+                if client.trivia == True:
+                    # calculate rewarded points for this round
                     points = 250 - ((self.application.current_hint + 1) * 50)
 
-                    # the answer
-                    self.application.clients[client].call("chatMessage", answer, username)
+                    # return the user's (correct) answer as normal response
+                    client.call("chatMessage", answer, username)
 
-                    # correct answer
-                    self.application.clients[client].call("correctAnswer", answer, username, points + highscore,
-                                                          points, myResponseTime, recordType)
+                    # return the user's correct answer including the points
+                    # that were rewarded
+                    client.call("correctAnswer", answer, username, points +
+                                highscore, points, myResponseTime ) # recordType)
 
-        # check if you could be the winner
+        # check if you're still able to win this round and somebody hasn't already
+        # given the correct answer
         if self.application.winner == False:
-
             # check if it's the right answer
-            if myAnswer:
-                #log.msg("Winner: "+ username +" answered in " + myResponseTime + " seconds.")
+            if myAnswer == True:
+                log.msg("Winner: %s answered in %s seconds." % (
+                        username, myResponseTime))
+
                 # you are the winner
                 self.application.winner = True
 
-                # your time
-                self.application.responseTimeRecord.time = myResponseTime
+                # store the response time
+                #self.application.responseTimeRecord.time = myResponseTime
 
-                # add points
+                # add points to personal highscore
                 highscore += (250 - (self.application.current_hint + 1) * 50)
 
                 # check personal response time record
-                if record:
+                if record == True:
                     # update time record in database
-                    updateResponseTime = collab.trivia.setResponseTimeRecord(username, myResponseTime)
+                    #call = self.application.service.setResponseTimeRecord(username, myResponseTime)
+                    #call.addCallback(self._gotStartupData)
+                    #call.addErrback(self._gotStartupError)
 
                     # world record?
-                    if myResponseTime < self.application.responseTimeRecord.responseTime:
+                    #if myResponseTime < self.application.responseTimeRecord.responseTime:
                         # update record holder data
-                        self.application.responseTimeRecord.responseTime = myResponseTime
-                        self.application.responseTimeRecord.username = username
-                        recordType = "world"
-                    else:
-                        recordType = "personal"
+                        #self.application.responseTimeRecord.responseTime = myResponseTime
+                        #self.application.responseTimeRecord.username = username
+                        #recordType = "world"
+                    #else:
+                        #recordType = "personal"
 
-                    #msg.log("New " + recordType + " record by " + username + " with " + myResponseTime + " seconds.")
+                    #log.msg("New %s record by %s with %s seconds." % (
+                    #        recordType, username, myResponseTime))
 
                     # update responseTimeRecord on winning client
                     newClient.call("updateResponseRecord", myResponseTime)
 
                 # update highscore in database
-                updateHighscore = collab.trivia.setHighscore(username, highscore)
+                #call = self.application.service.setHighscore(username, highscore)
+                #call.addCallback(self._gotStartupData)
+                #call.addErrback(self._gotStartupError)
 
                 # update highscore on winning client
                 newClient.call("updateHighscore", highscore)
 
                 # clear old intervals
-                clearInterval(self.application.theHints)
+                #clearInterval(self.application.theHints)
 
                 # start new question after few seconds
-                self.application.startupQuestion = setInterval(startNewQuestion, newQuestion_Interval)
+                #self.application.startupQuestion = setInterval(startNewQuestion, newQuestion_Interval)
 
             # the answer is not correct
             else:
-
                 # send clients the incorrect answer
-                for client in self.application.clients:
-                    if self.application.clients[client].trivia == True:
-                        self.application.clients[client].call("chatMessage", answer, username)
+                for i, client in self.application.clients.items():
+                    if client.trivia == True:
+                        client.call("chatMessage", answer, username)
 
         # answered too late
         else:
             # but it's the right answer
             if myAnswer == True:
                 # the amount of seconds the answer came late
-                difference = String(myResponseTime-self.application.responseTimeRecord.time).substr(0, 5)
+                difference = 0 #String(myResponseTime-self.application.responseTimeRecord.time).substr(0, 5)
 
                 # add difference to message
-                answer += "    <b>(+" + difference + " sec.)</b>"
+                answer += "    <b>(+%s sec.)</b>" % difference
 
-                #log.msg("LATE " + username + " gave the right answer but " + difference + " seconds too late.")
+                #log.msg("LATE: %s gave the right answer but %s seconds too late." % (
+                #        username, difference))
 
             # send clients the late (in)correct answer
-            for client in self.application.clients:
-                if self.application.clients[client].trivia == True:
-                    self.application.clients[client].call("chatMessage", answer, username)
+            for i, client in self.application.clients.items():
+                if client.trivia == True:
+                    client.call("chatMessage", answer, username)
 
 
     def invokeOnClient(self, data):
@@ -193,7 +199,7 @@ class TriviaApplication(Application):
     total_hints = 3
 
     def __init__(self, gateway='http://localhost:8000/gateway',
-                       service_path='trivia'):
+                 service_path='trivia'):
         """
         @param gateway: Remoting gateway URL.
         @type gateway: C{str}
@@ -300,6 +306,8 @@ class TriviaApplication(Application):
             # tell the client it's ok to connect
             accepted = True
 
+        # XXX: include rejection message for client (could not load startup
+        #      questions)
         return accepted
 
 
@@ -312,9 +320,9 @@ class TriviaApplication(Application):
         """
         failure.printDetailedTraceback()
 
-        # XXX: this returns 'NetConnection.Connect.Rejected' with status message
-        # 'Authorization is required'. This should say something like
-        # 'Error starting Mr. Trivia` instead (and possibly include the
+        # XXX: this currently returns 'NetConnection.Connect.Rejected' with
+        # status message 'Authorization is required'. This should say something
+        # like 'Error starting Mr. Trivia` instead (and possibly include the
         # failure). See rtmpy ticket #141.
         return False
 
@@ -371,7 +379,7 @@ class TriviaApplication(Application):
         Picks a random new question and notifies all connected clients.
         """
         if len(self.to_ask_questions) == 0:
-            log.msg("Restarting...")
+            #log.msg("Restarting...")
             self.to_ask_questions = self.questions[:]
 
         # pick a random question
@@ -527,11 +535,11 @@ class TriviaApplication(Application):
         @rtype: C{bool}
         """
         duplicate = False
-        log.msg('check: ' + name)
+        log.msg('Checking duplicate username for: %s' % name)
 
-        for client in self.clients:
-            if self.clients[client].username and self.clients[client].username == name:
-                log.msg(self.clients[client].username)
+        for i, client in self.clients.items():
+            if client.username and client.username == name:
+                log.msg("Found duplicate username for '%s'" % client.username)
                 duplicate = True
                 break
 
