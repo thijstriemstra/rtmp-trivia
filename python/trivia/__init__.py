@@ -247,6 +247,11 @@ class TriviaApplication(Application):
 
                 # load questions, returns a Deferred
                 accepted_client = self._load_questions()
+            else:
+                # XXX: return rejection message for client (duplicate username)
+                error_msg = 'Duplicate username'
+        else:
+            accepted_client = True
 
         return accepted_client
 
@@ -297,17 +302,17 @@ class TriviaApplication(Application):
         # XXX: save the array in sharedobject (rtmpy ticket #46)
         #self.setAttribute("askedQuestions", self.questions)
 
-        accepted = False
-
         if len(self.questions) > 0:
             # start Mr. Trivia
             self._start_game()
 
             # tell the client it's ok to connect
             accepted = True
+        else:
+            # XXX: return rejection message for client
+            error_msg = 'Could not load startup questions'
+            accepted = False
 
-        # XXX: include rejection message for client (could not load startup
-        #      questions)
         return accepted
 
 
@@ -460,24 +465,25 @@ class TriviaApplication(Application):
 
     def _send_trivia_crew(self, method, object1, object2=None):
         """
+        Invoke a method on all remote clients playing trivia.
         """
         # check which clients need a question
-        for client in self.clients:
+        for i, client in self.clients.items():
             """
-            if self.clients[i].trivia:
+            if client.trivia:
                 log.msg("client '%s' is playin trivia: '%s'" %s (
-                        self.clients[i].id,
-                        self.clients[i].trivia))
+                        client.id, client.trivia))
             """
             # give the client a new question
             if object2:
-                self.clients[client].call(method, object1, object2)
+                client.call(method, object1, object2)
             else:
-                self.clients[client].call(method, object1)
+                client.call(method, object1)
 
 
     def _start_new_question(self):
         """
+        Restart question generator.
         """
         # stop startup question generator
         self.question_generator.stop()
@@ -535,11 +541,11 @@ class TriviaApplication(Application):
         @rtype: C{bool}
         """
         duplicate = False
-        log.msg('Checking duplicate username for: %s' % name)
+        #log.msg('Checking duplicate username for: %s' % name)
 
         for i, client in self.clients.items():
             if client.username and client.username == name:
-                log.msg("Found duplicate username for '%s'" % client.username)
+                #log.msg("Found duplicate username for '%s'" % client.username)
                 duplicate = True
                 break
 
