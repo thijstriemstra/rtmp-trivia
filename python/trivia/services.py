@@ -15,8 +15,12 @@ class Question(object):
     Trivia question.
     """
     def __init__(self, id=None, question=None):
-        self.question = question
+        """
+        @type id: C{str}
+        @type question: C{str}
+        """
         self.id = id
+        self.question = question
 
 
 class TriviaRemotingService(object):
@@ -25,12 +29,15 @@ class TriviaRemotingService(object):
     """
 
     def __init__(self, meta):
+        """
+        @type meta:
+        """
         self.questions = Table('questions', meta, autoload=True)
 
 
     def getQuestions(self):
         """
-        Load all questions with answers.
+        Load all questions with their answers.
         """
         query = self.questions.select().execute()
         result = []

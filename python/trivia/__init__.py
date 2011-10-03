@@ -31,25 +31,37 @@ namespace = 'com.collab.rtmptrivia'
 
 class TriviaClient(Client):
     """
-    Remote methods that are exposed to the client.
+    Remote methods that are exposed to the trivia client.
     """
 
     def playTrivia(self, join):
         """
-        subscribe to the trivia game
+        Join or leave the trivia game.
+        
+        @param join: Boolean indicating whether the user wants to join or
+                     leave the game.
+        @type join: C{bool}
         """
         self.trivia = join
-        
+
         log.msg('playTrivia: %s' % self.trivia)
 
 
-    def giveAnswer(self, answer, username, highscore, myResponseTime=None, record=None):
+    def giveAnswer(self, answer, username, highscore, myResponseTime=None,
+                   record=None):
         """
         Answer to question or send chat message.
 
         @param answer: Answer to question or chat message.
+        @type answer: C{str}
         @param username: User's name.
-        @param highscore: Highscore for this client. 
+        @type username: C{str}
+        @param highscore: Highscore for this client.
+        @type highscore: C{int}
+        @param myResponseTime:
+        @type myResponseTime:
+        @param record:
+        @type record:
         """
         myAnswer = answer.lower() == self.application.answer.lower()
 
@@ -155,8 +167,11 @@ class TriviaClient(Client):
     def invokeOnClient(self, data):
         """
         Invokes some method on the connected clients.
+        
+        Note: for debugging, to be removed.
         """
         log.msg('invokeOnClient: %s' % data)
+
         for i, client in self.application.clients.items():
             #client.call('some_method', data)
             d = client.call('some_method', data, notify=True)
@@ -167,18 +182,24 @@ class TriviaClient(Client):
 
 class TriviaApplication(Application):
     """
-    Trivia server-side application.
+    Server-side Trivia application.
     """
 
     client = TriviaClient
     appAgent = 'RTMP-Trivia/%s' % str(__version__)
 
-    question_interval = 4
-    hint_interval = 12
+    question_interval = 4 # sec
+    hint_interval = 12 # sec
     total_hints = 3
 
     def __init__(self, gateway='http://localhost:8000/gateway',
                        service_path='trivia'):
+        """
+        @param gateway: Remoting gateway URL.
+        @type gateway: C{str}
+        @param service_path: Remoting service path.
+        @type service_path: C{str}
+        """
         self.gateway = gateway
         self.service_path = service_path
         self.questions = []
@@ -192,29 +213,44 @@ class TriviaApplication(Application):
 
     def onConnect(self, client, username):
         """
+        Invoked when the client connects to the application for the first time.
+        
+        @param client: Reference to the connecting RTMP client.
+        @type client: L{rtmpy.server.Client}
+        @param username: User's name.
+        @type username: C{str}
         """
         log.msg("")
         log.msg(60 * "-")
         log.msg("New client connection for '%s' application from client: %s" % (
                 self.name, client.id))
-        log.msg("Username: %s" % username)
         log.msg("Flash Player: %s" % client.agent)
         log.msg("URI: %s" % client.uri)
+        log.msg("Username: %s" % username)
         log.msg("")
 
-        # configure client
-        client.username = username
-        client.trivia = False
-        client.highscore = 0
+        accepted_client = False
 
-        # load questions
-        result = self._load_questions()
+        # configure Trivia client
+        if self.name.startswith("trivia"):
+            # check for duplicate username
+            if self._checkDuplicateName(username) == False:
+                client.username = username
+                client.trivia = False
+                client.highscore = 0
 
-        return result
+                # load questions, returns a Deferred
+                accepted_client = self._load_questions()
+
+        return accepted_client
 
 
     def onDisconnect(self, client):
         """
+        Invoked when the client disconnects from the application.
+        
+        @param client: Reference to the connecting RTMP client.
+        @type client: L{rtmpy.server.Client}
         """
         log.msg("Client '%s' has been disconnected from the application." % client.id)
 
@@ -224,7 +260,7 @@ class TriviaApplication(Application):
         @note: `onAppStart` is not fully implemented in RTMPy, see ticket #138
         """
         # create Mr. Trivia
-        if self.name == "trivia":
+        if self.name.startswith("trivia"):
             # XXX: no shared object support yet (rtmpy ticket #46)
             #self.questions = self.getAttribute("askedQuestions")
 
@@ -240,31 +276,45 @@ class TriviaApplication(Application):
             self.service = self.remoting.getService(self.service_path)
 
 
-    def _startupData(self, result):
+    def _gotStartupData(self, result):
         """
-        Handle startup.
+        Handle loading of startup data.
+        
+        @param result: Remoting data returned from the server.
+        @type result: C{list}
+        @return: Boolean indicating whether the startup data was successfully
+                 loaded or not.
+        @rtype: C{bool}
         """
         self.questions = result
 
         # XXX: save the array in sharedobject (rtmpy ticket #46)
         #self.setAttribute("askedQuestions", self.questions)
 
-        # start Mr. Trivia
-        self._start_game()
+        accepted = False
 
-        # Tell the client it's ok to connect
-        return True
+        if len(self.questions) > 0:
+            # start Mr. Trivia
+            self._start_game()
+
+            # tell the client it's ok to connect
+            accepted = True
+
+        return accepted
 
 
-    def _startupError(self, failure):
+    def _gotStartupError(self, failure):
         """
         Handle errors while loading startup data.
+
+        @param failure:
+        @type failure: 
         """
         failure.printDetailedTraceback()
 
         # XXX: this returns 'NetConnection.Connect.Rejected' with status message
         # 'Authorization is required'. This should say something like
-        # 'Error starting Mr. Trivia` instead (and possibly including the
+        # 'Error starting Mr. Trivia` instead (and possibly include the
         # failure). See rtmpy ticket #141.
         return False
 
@@ -272,6 +322,9 @@ class TriviaApplication(Application):
     def _load_questions(self):
         """
         Load questions at startup.
+        
+        @return: Either a Deferred (when loading the questions) or True (when
+                 the questions have previously been loaded into the application).
         """
         # is it the first time
         if len(self.questions) == 0:
@@ -280,8 +333,8 @@ class TriviaApplication(Application):
 
             # load startup questions
             call = self.service.getQuestions()
-            call.addCallback(self._startupData)
-            call.addErrback(self._startupError)
+            call.addCallback(self._gotStartupData)
+            call.addErrback(self._gotStartupError)
 
             return call
 
@@ -414,6 +467,7 @@ class TriviaApplication(Application):
             else:
                 self.clients[client].call(method, object1)
 
+
     def _start_new_question(self):
         """
         """
@@ -463,3 +517,22 @@ class TriviaApplication(Application):
 
         return answer_list
 
+
+    def _checkDuplicateName(self, name):
+        """
+        Check for duplicate username among the application's connected clients.
+        
+        @return: Boolean indicating whether or not a client has a duplicate
+                 username.
+        @rtype: C{bool}
+        """
+        duplicate = False
+        log.msg('check: ' + name)
+
+        for client in self.clients:
+            if self.clients[client].username and self.clients[client].username == name:
+                log.msg(self.clients[client].username)
+                duplicate = True
+                break
+
+        return duplicate

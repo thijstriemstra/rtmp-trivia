@@ -46,14 +46,17 @@ class RTMPServer(ServerFactory):
 
 class WebServer(Site):
     """
-    Webserver hosting an AMF gateway and application files.
+    Webserver hosting an AMF gateway and static application files.
     """
 
     def __init__(self, resources_path, services, logLevel=logging.ERROR,
                  gateway_path='gateway', debug=False):
         """
-        @type resources_path: str
-        @type services: dict
+        @type resources_path: C{str}
+        @type services: C{dict}
+        @type logLevel: C{int}
+        @type gateway_path: C{str}
+        @type debug: C{bool}
         """
 
         # Map ActionScript classes to Python
@@ -63,6 +66,7 @@ class WebServer(Site):
         gateway = TwistedGateway(services, expose_request=False,
                                  logger=logging, debug=debug)
 
+        # static files
         root = File(resources_path)
         root.putChild(gateway_path, gateway)
 
@@ -84,7 +88,13 @@ class TriviaService(service.Service):
         log.msg('Web')
         log.msg(80 * '-')
         log.msg('')
-        log.msg('       htdocs:      %s' % self.options['htdocs'])
+        log.msg('       htdocs:       %s' % self.options['htdocs'])
+        log.msg('')
+        log.msg('Database')
+        log.msg(80 * '-')
+        log.msg('')
+        log.msg('       Connection:   %s' % self.options['database'])
+        log.msg('       SQLAlchemy:   %s' % str(sqlalchemy_version))
         log.msg('')
         log.msg('AMF')
         log.msg(80 * '-')
@@ -96,7 +106,6 @@ class TriviaService(service.Service):
         log.msg('       Base alias:   %s' % namespace)
         log.msg('       PyAMF:        %s' % str(pyamf_version))
         log.msg('       Plasma:       %s' % plasma_version)
-        log.msg('       SQLAlchemy:   %s' % str(sqlalchemy_version))
         log.msg('')
         log.msg('RTMP')
         log.msg(80 * '-')
@@ -106,6 +115,7 @@ class TriviaService(service.Service):
                                                   self.options['rtmp-port']))
         log.msg('       Application:  %s' % self.options['rtmp-app'])
         log.msg('       RTMPy:        %s' % str(rtmpy_version))
+        log.msg('')
         log.msg('')
         log.msg('Trivia service completed startup.')
         log.msg('')
@@ -146,7 +156,7 @@ class TriviaServiceMaker(object):
         trivia_service = TriviaService()
         trivia_service.options = options
         trivia_service.setServiceParent(top_service)
-        
+
         logging.basicConfig(
             level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S%z',
             format='%(asctime)s [%(name)s] %(message)s'
@@ -155,7 +165,7 @@ class TriviaServiceMaker(object):
         amf_host = '%s://%s:%s/gateway' % (options['amf-transport'],
                                            options['amf-host'],
                                            options['amf-port'])
-        
+
         # rtmp
         app = TriviaApplication(amf_host, options['amf-service'])
         rtmp_apps = {
